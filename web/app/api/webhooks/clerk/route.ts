@@ -2,9 +2,6 @@ import type { NextRequest } from "next/server";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { prisma } from "@/lib/prisma";
 
-// Clerk -> our DB sync. Configure this URL as a webhook endpoint in the Clerk
-// Dashboard and set CLERK_WEBHOOK_SIGNING_SECRET. verifyWebhook() validates the
-// Svix signature for us and returns the typed event.
 export async function POST(req: NextRequest) {
   let evt;
   try {

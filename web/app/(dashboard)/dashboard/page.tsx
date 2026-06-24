@@ -1,8 +1,8 @@
+import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 
 export default async function DashboardPage() {
-  // Route is protected by proxy.ts, so a user is guaranteed here.
   const user = await currentUser();
 
   return (
@@ -17,10 +17,15 @@ export default async function DashboardPage() {
         progress will live here.
       </p>
 
+      <Link
+        href="/chat"
+        className="inline-flex w-fit rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+      >
+        Start a conversation →
+      </Link>
+
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
-        This is a placeholder. The real dashboard (session history, fluency
-        trends, feedback) gets built on a later day. For now it confirms the
-        route is protected and Clerk auth works end to end.
+        Your recent conversations and progress will show up here as you practice.
       </div>
     </main>
   );

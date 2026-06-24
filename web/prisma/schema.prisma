@@ -1,7 +1,3 @@
-// FlowChat — Prisma schema
-// Prisma 7 uses the modern `prisma-client` generator (TypeScript, ESM).
-// The client is generated into ../generated/prisma and imported via "@/generated/prisma/client".
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -11,12 +7,40 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Application user, mirrored from Clerk via the user.* webhooks.
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(cuid())
+  clerkId       String         @unique
+  email         String         @unique
+  name          String?
+  conversations Conversation[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+enum Role {
+  user
+  assistant
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  title     String    @default("New conversation")
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  role           Role
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
