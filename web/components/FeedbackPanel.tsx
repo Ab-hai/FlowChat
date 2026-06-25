@@ -20,7 +20,7 @@ function clarityBand(score: number) {
   if (score >= 70)
     return {
       label: "Mostly clear",
-      className: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300",
+      className: "bg-secondary/15 text-secondary",
     };
   if (score >= 50)
     return {
@@ -111,7 +111,7 @@ export function FeedbackPanel({
 
         <section>
           <h3 className="mb-2 text-sm font-semibold">Focus on next</h3>
-          <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+          <p className="rounded-lg bg-secondary/10 p-3 text-sm text-secondary">
             {feedback.focusArea}
           </p>
         </section>

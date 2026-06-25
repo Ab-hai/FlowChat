@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FeedbackPanel, type Debrief } from "@/components/FeedbackPanel";
 import { VoiceButton } from "@/components/VoiceButton";
@@ -263,39 +262,29 @@ export function Chat({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
-        <Link
-          href="/dashboard"
-          className="text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
-          ← Dashboard
-        </Link>
-        <div className="flex items-center gap-3">
-          {voiceError && (
-            <span className="text-xs text-red-500">{voiceError}</span>
-          )}
-          {messages.length > 0 && feedbackError && (
-            <span className="text-xs text-red-500">{feedbackError}</span>
-          )}
-          {messages.length > 0 && (
-            <button
-              onClick={getFeedback}
-              disabled={loadingFeedback || isStreaming || voiceMode}
-              className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            >
-              {loadingFeedback ? "Analyzing…" : "Get feedback"}
-            </button>
-          )}
-          {!voiceMode && (
-            <button
-              onClick={startVoiceMode}
-              disabled={isStreaming}
-              className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-            >
-              🎙 Voice mode
-            </button>
-          )}
-        </div>
+      <div className="flex items-center justify-end gap-3 px-4 py-2">
+        {voiceError && <span className="text-xs text-red-500">{voiceError}</span>}
+        {messages.length > 0 && feedbackError && (
+          <span className="text-xs text-red-500">{feedbackError}</span>
+        )}
+        {messages.length > 0 && (
+          <button
+            onClick={getFeedback}
+            disabled={loadingFeedback || isStreaming || voiceMode}
+            className="rounded-full border border-black/15 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-black/5 disabled:opacity-50"
+          >
+            {loadingFeedback ? "Analyzing…" : "Get feedback"}
+          </button>
+        )}
+        {!voiceMode && (
+          <button
+            onClick={startVoiceMode}
+            disabled={isStreaming}
+            className="rounded-full border border-black/15 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-black/5 disabled:opacity-50"
+          >
+            🎙 Voice mode
+          </button>
+        )}
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-6">
@@ -318,11 +307,17 @@ export function Chat({
               >
                 <div
                   className={
-                    "max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm " +
+                    "max-w-[75%] whitespace-pre-wrap rounded-2xl border px-4 py-2 text-sm shadow-[0_3px_12px_rgba(0,0,0,0.07)] " +
                     (m.role === "user"
-                      ? "bg-blue-600 text-white"
-                      : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100")
+                      ? "border-white/10 text-white"
+                      : "border-black/5 text-zinc-800")
                   }
+                  style={{
+                    backgroundImage:
+                      m.role === "user"
+                        ? "linear-gradient(135deg, #e35a30 0%, #be3f1c 100%)"
+                        : "linear-gradient(135deg, #ffffff 0%, #f1eef5 100%)",
+                  }}
                 >
                   {waiting ? <TypingDots /> : m.content}
                 </div>
@@ -364,12 +359,12 @@ export function Chat({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type your message…"
-              className="flex-1 rounded-full border border-zinc-300 bg-transparent px-4 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-700"
+              className="flex-1 rounded-full border border-zinc-300 bg-transparent px-4 py-2 text-sm outline-none focus:border-secondary dark:border-zinc-700"
             />
             <button
               type="submit"
               disabled={isStreaming || !input.trim()}
-              className="rounded-full bg-blue-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-full bg-secondary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary-hover disabled:opacity-50"
             >
               Send
             </button>

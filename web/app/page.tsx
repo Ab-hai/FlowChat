@@ -20,7 +20,7 @@ export default async function Home() {
         {userId ? (
           <Link
             href="/dashboard"
-            className="rounded-full bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
+            className="rounded-full bg-secondary px-6 py-3 font-medium text-white transition-colors hover:bg-secondary-hover"
           >
             Go to dashboard
           </Link>
@@ -28,7 +28,7 @@ export default async function Home() {
           <>
             <Link
               href="/sign-up"
-              className="rounded-full bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
+              className="rounded-full bg-secondary px-6 py-3 font-medium text-white transition-colors hover:bg-secondary-hover"
             >
               Get started
             </Link>

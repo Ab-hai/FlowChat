@@ -19,7 +19,7 @@ export default async function DashboardPage() {
 
       <Link
         href="/chat"
-        className="inline-flex w-fit rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+        className="inline-flex w-fit rounded-full bg-secondary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-secondary-hover"
       >
         Start a conversation →
       </Link>
