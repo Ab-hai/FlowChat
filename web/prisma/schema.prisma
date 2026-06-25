@@ -28,6 +28,7 @@ model Conversation {
   userId    String
   title     String    @default("New conversation")
   messages  Message[]
+  feedback  Feedback?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -43,4 +44,17 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
+}
+
+model Feedback {
+  id              String       @id @default(cuid())
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId  String       @unique
+  clarityScore    Int
+  summary         String
+  overusedWords   Json
+  betterPhrasings Json
+  focusArea       String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }

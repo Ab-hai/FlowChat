@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Literal
 
@@ -77,3 +78,57 @@ async def chat(req: ChatRequest):
                 yield content
 
     return StreamingResponse(token_stream(), media_type="text/plain; charset=utf-8")
+
+
+class Phrasing(BaseModel):
+    original: str
+    suggestion: str
+
+
+class Debrief(BaseModel):
+    clarity_score: int = 0
+    summary: str = ""
+    overused_words: list[str] = []
+    better_phrasings: list[Phrasing] = []
+    focus_area: str = ""
+
+
+DEBRIEF_PROMPT = (
+    "You are a supportive English-speaking coach reviewing a practice "
+    "conversation. Analyze ONLY the user's messages; ignore the assistant's. "
+    "Reply with a JSON object using exactly these keys: "
+    '"clarity_score" (integer 0-100 for how clear and natural the user sounded), '
+    '"summary" (1-2 encouraging sentences), '
+    '"overused_words" (array of up to 5 genuine filler or crutch words the user '
+    'leaned on, like "um", "like", "basically", "actually", "you know"; never '
+    'include normal words such as pronouns, articles, prepositions, or common '
+    'verbs like "is", "have", or "go"; empty array if there are none), '
+    '"better_phrasings" (array of up to 4 objects with "original" and "suggestion"), '
+    'and "focus_area" (one specific, actionable thing to practice next). '
+    "Be concrete and kind. Output only the JSON object."
+)
+
+
+@app.post("/debrief")
+async def debrief(req: ChatRequest):
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY is not set")
+
+    client = AsyncGroq(api_key=api_key)
+    transcript = "\n".join(f"{m.role}: {m.content}" for m in req.messages)
+
+    completion = await client.chat.completions.create(
+        model=GROQ_MODEL,
+        messages=[
+            {"role": "system", "content": DEBRIEF_PROMPT},
+            {"role": "user", "content": f"Conversation:\n\n{transcript}"},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.3,
+    )
+
+    try:
+        return Debrief(**json.loads(completion.choices[0].message.content))
+    except Exception:
+        raise HTTPException(status_code=502, detail="Could not parse feedback")

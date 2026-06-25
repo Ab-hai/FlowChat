@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FeedbackPanel, type Debrief } from "@/components/FeedbackPanel";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -25,6 +26,9 @@ export function Chat({
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [feedback, setFeedback] = useState<Debrief | null>(null);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const conversationId = useRef<string | null>(initialConversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -93,8 +97,44 @@ export function Chat({
     }
   }
 
+  async function getFeedback() {
+    const cid = conversationId.current;
+    if (!cid || loadingFeedback || isStreaming) return;
+
+    setFeedbackError(null);
+    setLoadingFeedback(true);
+    try {
+      const res = await fetch("/api/debrief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: cid }),
+      });
+      if (!res.ok) throw new Error();
+      setFeedback((await res.json()) as Debrief);
+    } catch {
+      setFeedbackError("Couldn't generate feedback. Try again.");
+    } finally {
+      setLoadingFeedback(false);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
+      {messages.length > 0 && (
+        <div className="flex items-center justify-end gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+          {feedbackError && (
+            <span className="text-xs text-red-500">{feedbackError}</span>
+          )}
+          <button
+            onClick={getFeedback}
+            disabled={loadingFeedback || isStreaming}
+            className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          >
+            {loadingFeedback ? "Analyzing…" : "Get feedback"}
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 space-y-4 overflow-y-auto p-6">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center text-zinc-500">
@@ -150,6 +190,10 @@ export function Chat({
           </button>
         </div>
       </form>
+
+      {feedback && (
+        <FeedbackPanel feedback={feedback} onClose={() => setFeedback(null)} />
+      )}
     </div>
   );
 }
