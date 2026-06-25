@@ -3,7 +3,7 @@ import os
 from typing import Literal
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from groq import AsyncGroq
@@ -132,3 +132,19 @@ async def debrief(req: ChatRequest):
         return Debrief(**json.loads(completion.choices[0].message.content))
     except Exception:
         raise HTTPException(status_code=502, detail="Could not parse feedback")
+
+
+@app.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY is not set")
+
+    client = AsyncGroq(api_key=api_key)
+    data = await audio.read()
+
+    result = await client.audio.transcriptions.create(
+        model="whisper-large-v3-turbo",
+        file=(audio.filename or "audio.webm", data),
+    )
+    return {"text": result.text}
