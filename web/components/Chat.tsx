@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FeedbackPanel, type Debrief } from "@/components/FeedbackPanel";
 import { VoiceButton } from "@/components/VoiceButton";
@@ -262,29 +263,39 @@ export function Chat({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex items-center justify-end gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
-        {voiceError && <span className="text-xs text-red-500">{voiceError}</span>}
-        {messages.length > 0 && feedbackError && (
-          <span className="text-xs text-red-500">{feedbackError}</span>
-        )}
-        {messages.length > 0 && (
-          <button
-            onClick={getFeedback}
-            disabled={loadingFeedback || isStreaming || voiceMode}
-            className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            {loadingFeedback ? "Analyzing…" : "Get feedback"}
-          </button>
-        )}
-        {!voiceMode && (
-          <button
-            onClick={startVoiceMode}
-            disabled={isStreaming}
-            className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
-          >
-            🎙 Voice mode
-          </button>
-        )}
+      <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+        <Link
+          href="/dashboard"
+          className="text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
+        >
+          ← Dashboard
+        </Link>
+        <div className="flex items-center gap-3">
+          {voiceError && (
+            <span className="text-xs text-red-500">{voiceError}</span>
+          )}
+          {messages.length > 0 && feedbackError && (
+            <span className="text-xs text-red-500">{feedbackError}</span>
+          )}
+          {messages.length > 0 && (
+            <button
+              onClick={getFeedback}
+              disabled={loadingFeedback || isStreaming || voiceMode}
+              className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              {loadingFeedback ? "Analyzing…" : "Get feedback"}
+            </button>
+          )}
+          {!voiceMode && (
+            <button
+              onClick={startVoiceMode}
+              disabled={isStreaming}
+              className="rounded-full border border-zinc-300 px-4 py-1.5 text-xs font-medium transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              🎙 Voice mode
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-6">

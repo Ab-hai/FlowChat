@@ -45,18 +45,7 @@ export default async function ChatLayout({
         </nav>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex items-center justify-between border-b border-zinc-200 p-4 dark:border-zinc-800">
-          <h1 className="text-lg font-semibold">Practice chat</h1>
-          <Link
-            href="/dashboard"
-            className="text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-zinc-100"
-          >
-            Dashboard
-          </Link>
-        </header>
-        {children}
-      </div>
+      <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
     </div>
   );
 }
