@@ -1,5 +1,7 @@
 "use client";
 
+import { clarityBand } from "@/lib/clarity";
+
 type Phrasing = { original: string; suggestion: string };
 
 export type Debrief = {
@@ -9,30 +11,6 @@ export type Debrief = {
   betterPhrasings: Phrasing[];
   focusArea: string;
 };
-
-function clarityBand(score: number) {
-  if (score >= 85)
-    return {
-      label: "Clear & natural",
-      className:
-        "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300",
-    };
-  if (score >= 70)
-    return {
-      label: "Mostly clear",
-      className: "bg-secondary/15 text-secondary",
-    };
-  if (score >= 50)
-    return {
-      label: "Getting there",
-      className:
-        "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-    };
-  return {
-    label: "Keep practicing",
-    className: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  };
-}
 
 export function FeedbackPanel({
   feedback,
