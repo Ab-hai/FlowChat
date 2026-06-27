@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDbUser } from "@/lib/user";
+import { clockTime } from "@/lib/time";
 import { Chat } from "@/components/Chat";
 
 export default async function ConversationPage({
@@ -18,7 +19,7 @@ export default async function ConversationPage({
     include: {
       messages: {
         orderBy: { createdAt: "asc" },
-        select: { role: true, content: true },
+        select: { role: true, content: true, createdAt: true },
       },
     },
   });
@@ -27,6 +28,7 @@ export default async function ConversationPage({
   const initialMessages = conversation.messages.map((m) => ({
     role: m.role as "user" | "assistant",
     content: m.content,
+    time: clockTime(m.createdAt),
   }));
 
   return (
@@ -34,6 +36,7 @@ export default async function ConversationPage({
       key={conversation.id}
       initialConversationId={conversation.id}
       initialMessages={initialMessages}
+      initialTitle={conversation.title}
     />
   );
 }

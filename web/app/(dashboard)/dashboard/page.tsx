@@ -1,30 +1,46 @@
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateDbUser } from "@/lib/user";
 import { clarityBand } from "@/lib/clarity";
+import { relativeTime } from "@/lib/time";
 import { ClarityChart } from "@/components/ClarityChart";
+
+const cardStyle = {
+  background: "white",
+  borderRadius: 20,
+  border: "1px solid rgba(0,0,0,0.07)",
+  boxShadow: "0 2px 14px rgba(0,0,0,0.05)",
+} as const;
+
+const sectionLabel = {
+  fontSize: 10.5,
+  fontWeight: 600,
+  color: "#6b7280",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+} as const;
 
 export default async function DashboardPage() {
   const user = await getOrCreateDbUser();
 
-  const feedbacks = user
-    ? await prisma.feedback.findMany({
-        where: { conversation: { userId: user.id } },
-        orderBy: { createdAt: "asc" },
-        select: {
-          clarityScore: true,
-          focusArea: true,
-          overusedWords: true,
-          createdAt: true,
-          conversation: { select: { id: true, title: true } },
-        },
-      })
-    : [];
+  const [conversationCount, feedbacks] = await Promise.all([
+    user ? prisma.conversation.count({ where: { userId: user.id } }) : 0,
+    user
+      ? prisma.feedback.findMany({
+          where: { conversation: { userId: user.id } },
+          orderBy: { createdAt: "asc" },
+          select: {
+            clarityScore: true,
+            focusArea: true,
+            overusedWords: true,
+            createdAt: true,
+            conversation: { select: { id: true, title: true } },
+          },
+        })
+      : [],
+  ]);
 
-  const analyzed = feedbacks.length;
-
-  const chartData = feedbacks.slice(-12).map((f) => ({
+  const chartData = feedbacks.slice(-7).map((f) => ({
     score: f.clarityScore,
     label: new Date(f.createdAt).toLocaleDateString("en-US", {
       month: "short",
@@ -32,7 +48,10 @@ export default async function DashboardPage() {
     }),
   }));
 
-  const recent = [...feedbacks].reverse().slice(0, 6);
+  const recent = [...feedbacks].reverse().slice(0, 5);
+  const latestFocus = feedbacks.length
+    ? feedbacks[feedbacks.length - 1].focusArea
+    : null;
 
   const fillerCounts = new Map<string, number>();
   for (const f of feedbacks) {
@@ -46,98 +65,163 @@ export default async function DashboardPage() {
   }
   const topFillers = [...fillerCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+    .slice(0, 6)
+    .map(([w]) => w);
 
-  const firstName = user?.name ? user.name.split(" ")[0] : "";
+  const monthYear = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Your progress</h1>
-          <p className="text-sm text-zinc-500">
-            Welcome back{firstName ? `, ${firstName}` : ""}.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+    <main className="flex-1 overflow-y-auto" style={{ padding: "28px 26px 48px" }}>
+      <div className="mx-auto" style={{ maxWidth: 980 }}>
+        <div className="mb-[22px] flex items-center justify-between max-sm:pl-12">
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.6px", color: "#262626", marginBottom: 3 }}>
+              Your progress
+            </h1>
+            <p style={{ fontSize: 13, color: "#9ca3af" }}>
+              {conversationCount} session{conversationCount === 1 ? "" : "s"} tracked · {monthYear}
+            </p>
+          </div>
           <Link
             href="/chat"
-            className="rounded-full bg-secondary px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary-hover"
+            className="flex shrink-0 items-center"
+            style={{
+              gap: 6,
+              padding: "10px 20px",
+              borderRadius: 100,
+              background: "var(--fc)",
+              color: "white",
+              fontSize: 13,
+              fontWeight: 600,
+              boxShadow: "0 2px 10px rgba(var(--fc-rgb),0.35)",
+            }}
           >
-            Practice
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1v5.5L8.5 9" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            New session
           </Link>
-          <UserButton />
         </div>
-      </header>
 
-      <section className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_3px_12px_rgba(0,0,0,0.05)]">
-        <h2 className="mb-4 text-sm font-semibold">Clarity over time</h2>
-        <ClarityChart data={chartData} />
-      </section>
+        <div className="grid gap-4 lg:grid-cols-[1fr_308px]">
+          {/* Chart card */}
+          <div style={{ ...cardStyle, padding: 22 }}>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.3px", color: "#262626", marginBottom: 2 }}>
+                  Clarity over time
+                </div>
+                <div style={{ fontSize: 12, color: "#9ca3af" }}>Last 7 sessions</div>
+              </div>
+              <div className="flex" style={{ gap: 10 }}>
+                {[
+                  { c: "#16a34a", l: "Clear" },
+                  { c: "#ea580c", l: "Mostly" },
+                  { c: "#d97706", l: "Getting there" },
+                ].map((x) => (
+                  <div key={x.l} className="flex items-center" style={{ gap: 4 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: x.c }} />
+                    <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>{x.l}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <ClarityChart data={chartData} />
+          </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <section className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_3px_12px_rgba(0,0,0,0.05)]">
-          <h2 className="mb-4 text-sm font-semibold">Recent sessions</h2>
-          {recent.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              No analyzed sessions yet. Finish a chat and tap “Get feedback”.
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {recent.map((f) => {
-                const band = clarityBand(f.clarityScore);
-                return (
-                  <li key={f.conversation.id}>
+          {/* Right column */}
+          <div className="flex flex-col" style={{ gap: 14 }}>
+            {/* Recent sessions */}
+            <div style={{ ...cardStyle, padding: 18 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.3px", marginBottom: 14, color: "#262626" }}>
+                Recent sessions
+              </div>
+              {recent.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: "#9ca3af" }}>
+                  No analyzed sessions yet.
+                </p>
+              ) : (
+                recent.map((f) => {
+                  const band = clarityBand(f.clarityScore);
+                  return (
                     <Link
+                      key={f.conversation.id}
                       href={`/chat/${f.conversation.id}`}
-                      className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-black/5"
+                      className="flex items-center justify-between"
+                      style={{ padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}
                     >
-                      <span className="truncate text-sm">
-                        {f.conversation.title}
-                      </span>
+                      <div style={{ minWidth: 0, flex: 1, marginRight: 8 }}>
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: 500,
+                            color: "#262626",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            marginBottom: 2,
+                          }}
+                        >
+                          {f.conversation.title}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                          {relativeTime(f.createdAt)}
+                        </div>
+                      </div>
                       <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${band.className}`}
+                        className={`shrink-0 ${band.className}`}
+                        style={{ padding: "3px 9px", borderRadius: 100, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}
                       >
                         {band.label}
                       </span>
                     </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        <section className="rounded-xl border border-black/10 bg-white p-5 shadow-[0_3px_12px_rgba(0,0,0,0.05)]">
-          <h2 className="mb-4 text-sm font-semibold">Your patterns</h2>
-          {topFillers.length === 0 ? (
-            <p className="text-sm text-zinc-500">No filler-word patterns yet.</p>
-          ) : (
-            <>
-              <p className="mb-2 text-xs text-zinc-500">
-                Filler words you reach for most
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {topFillers.map(([word, count]) => (
-                  <span
-                    key={word}
-                    className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-800"
-                  >
-                    {word} · {count}
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
-          {analyzed > 0 && (
-            <div className="mt-4">
-              <p className="mb-1 text-xs text-zinc-500">Latest focus area</p>
-              <p className="rounded-lg bg-secondary/10 p-3 text-sm text-secondary">
-                {feedbacks[analyzed - 1].focusArea}
-              </p>
+                  );
+                })
+              )}
             </div>
-          )}
-        </section>
+
+            {/* Patterns */}
+            <div style={{ ...cardStyle, padding: 18 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: "-0.3px", marginBottom: 3, color: "#262626" }}>
+                Your patterns
+              </div>
+              <div style={{ fontSize: 11.5, color: "#9ca3af", marginBottom: 14 }}>
+                Based on all sessions
+              </div>
+              <div style={{ ...sectionLabel, marginBottom: 9 }}>Most-used filler words</div>
+              {topFillers.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: "#9ca3af", marginBottom: 16 }}>None yet.</p>
+              ) : (
+                <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 16 }}>
+                  {topFillers.map((word) => (
+                    <span
+                      key={word}
+                      style={{ padding: "4px 11px", background: "#fee2e2", color: "#b91c1c", borderRadius: 100, fontSize: 12, fontWeight: 600 }}
+                    >
+                      {word}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={{ ...sectionLabel, marginBottom: 9 }}>Latest focus area</div>
+              <div
+                style={{
+                  background: "rgba(var(--fc-rgb),0.07)",
+                  border: "1px solid rgba(var(--fc-rgb),0.2)",
+                  borderRadius: 12,
+                  padding: "12px 13px",
+                }}
+              >
+                <div style={{ fontSize: 12.5, color: latestFocus ? "#5f5f5f" : "#9ca3af", lineHeight: 1.55 }}>
+                  {latestFocus ?? "Finish a chat and tap “Get feedback” to see your focus area."}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

@@ -64,14 +64,27 @@ export function VoiceButton({
       onClick={recording ? stop : start}
       disabled={disabled || transcribing}
       aria-label={recording ? "Stop recording" : "Record voice message"}
-      className={
-        "flex shrink-0 items-center justify-center rounded-full border px-3 py-2 text-sm transition-colors disabled:opacity-50 " +
-        (recording
-          ? "animate-pulse border-red-500 bg-red-500 text-white"
-          : "border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900")
-      }
+      className="flex shrink-0 items-center justify-center"
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 9,
+        border: recording
+          ? "1px solid rgba(var(--fc-rgb),0.4)"
+          : "1px solid rgba(0,0,0,0.09)",
+        background: recording ? "rgba(var(--fc-rgb),0.1)" : "#f7f7f7",
+        opacity: disabled || transcribing ? 0.5 : 1,
+      }}
     >
-      {transcribing ? "…" : recording ? "⏹" : "🎤"}
+      {transcribing ? (
+        <span style={{ fontSize: 13, color: "#6b7280" }}>…</span>
+      ) : (
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <rect x="5" y="1.5" width="5" height="7" rx="2.5" stroke="#6b7280" strokeWidth="1.3" />
+          <path d="M2.5 8c0 2.76 2.24 5 5 5s5-2.24 5-5" stroke="#6b7280" strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M7.5 13v1.5" stroke="#6b7280" strokeWidth="1.3" strokeLinecap="round" />
+        </svg>
+      )}
     </button>
   );
 }

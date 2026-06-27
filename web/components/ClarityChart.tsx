@@ -5,58 +5,50 @@ type Point = { score: number; label: string };
 export function ClarityChart({ data }: { data: Point[] }) {
   if (data.length === 0) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-lg border border-black/10 px-4 text-center text-sm text-zinc-500">
+      <div
+        className="flex items-center justify-center text-center"
+        style={{
+          height: 190,
+          borderRadius: 12,
+          border: "1px dashed rgba(0,0,0,0.1)",
+          color: "#9ca3af",
+          fontSize: 13,
+          padding: "0 24px",
+        }}
+      >
         No feedback yet — finish a chat and tap “Get feedback” to start tracking
         your progress.
       </div>
     );
   }
 
-  const height = 160;
-  const barW = 30;
-  const gap = 16;
-  const labelGap = 22;
-  const width = data.length * barW + (data.length - 1) * gap;
+  const maxH = 165;
 
   return (
-    <div className="overflow-x-auto">
-      <svg
-        viewBox={`0 0 ${width} ${height + labelGap}`}
-        width={width}
-        height={height + labelGap}
-        role="img"
-        aria-label="Clarity score over time"
-      >
-        {data.map((d, i) => {
-          const band = clarityBand(d.score);
-          const barH = Math.max((d.score / 100) * height, 2);
-          const x = i * (barW + gap);
-          const y = height - barH;
-          return (
-            <g key={i}>
-              <rect x={x} y={y} width={barW} height={barH} rx={5} fill={band.color} />
-              <text
-                x={x + barW / 2}
-                y={y - 5}
-                textAnchor="middle"
-                fontSize="11"
-                fill="#555"
-              >
-                {d.score}
-              </text>
-              <text
-                x={x + barW / 2}
-                y={height + 15}
-                textAnchor="middle"
-                fontSize="10"
-                fill="#999"
-              >
-                {d.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+    <div className="flex" style={{ gap: 9, height: 190 }}>
+      {data.map((d, i) => {
+        const band = clarityBand(d.score);
+        const h = Math.max((d.score / 100) * maxH, 6);
+        return (
+          <div
+            key={i}
+            className="flex flex-col"
+            style={{ flex: 1, justifyContent: "flex-end", gap: 7 }}
+          >
+            <div
+              style={{
+                width: "100%",
+                height: h,
+                background: band.color,
+                borderRadius: "6px 6px 0 0",
+              }}
+            />
+            <span style={{ fontSize: 10, color: "#9ca3af", textAlign: "center" }}>
+              {d.label}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

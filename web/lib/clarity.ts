@@ -8,27 +8,27 @@ export function clarityBand(score: number): ClarityBand {
   if (score >= 85) {
     return {
       label: "Clear & natural",
-      className: "bg-green-100 text-green-800",
-      color: "#2f9e6e",
+      className: "bg-[#f0fdf4] text-[#16a34a]",
+      color: "#16a34a",
     };
   }
   if (score >= 70) {
     return {
       label: "Mostly clear",
-      className: "bg-secondary/15 text-secondary",
-      color: "#d14925",
+      className: "bg-[#fff7ed] text-[#ea580c]",
+      color: "#ea580c",
     };
   }
   if (score >= 50) {
     return {
       label: "Getting there",
-      className: "bg-amber-100 text-amber-800",
-      color: "#d9a441",
+      className: "bg-[#fffbeb] text-[#d97706]",
+      color: "#d97706",
     };
   }
   return {
     label: "Keep practicing",
-    className: "bg-zinc-200 text-zinc-700",
-    color: "#9a9a9a",
+    className: "bg-zinc-100 text-zinc-600",
+    color: "#9aa0a6",
   };
 }

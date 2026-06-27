@@ -12,6 +12,17 @@ export type Debrief = {
   focusArea: string;
 };
 
+const label = {
+  fontSize: 10.5,
+  fontWeight: 600,
+  color: "#6b7280",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+  marginBottom: 11,
+} as const;
+
+const divider = { height: 1, background: "rgba(0,0,0,0.06)", margin: "18px 22px 0" };
+
 export function FeedbackPanel({
   feedback,
   onClose,
@@ -23,76 +34,153 @@ export function FeedbackPanel({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
       onClick={onClose}
+      className="fixed inset-0 flex items-center justify-center"
+      style={{
+        background: "rgba(14,7,3,0.5)",
+        backdropFilter: "blur(5px)",
+        zIndex: 100,
+        padding: 20,
+      }}
     >
       <div
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "white",
+          borderRadius: 24,
+          width: "100%",
+          maxWidth: 508,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          boxShadow: "0 24px 72px rgba(0,0,0,0.24)",
+          animation: "slideModal 0.22s ease both",
+        }}
       >
-        <div className="mb-4 flex items-start justify-between">
-          <h2 className="text-xl font-semibold">Your feedback</h2>
+        {/* Header */}
+        <div className="flex items-start justify-between" style={{ padding: "22px 22px 0" }}>
+          <div>
+            <div style={{ ...label, marginBottom: 10, letterSpacing: "0.7px", color: "#9ca3af" }}>
+              Session feedback
+            </div>
+            <div
+              className={`inline-flex items-center ${band.className}`}
+              style={{ gap: 7, padding: "5px 13px", borderRadius: 100, marginBottom: 12 }}
+            >
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: band.color }} />
+              <span style={{ fontSize: 12.5, fontWeight: 700 }}>{band.label}</span>
+            </div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px", color: "#262626", lineHeight: 1.2 }}>
+              Here&apos;s your session feedback
+            </h2>
+          </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 transition-colors hover:text-zinc-600 dark:hover:text-zinc-200"
             aria-label="Close"
+            className="flex shrink-0 items-center justify-center"
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 8,
+              border: "1px solid rgba(0,0,0,0.1)",
+              background: "#f5f5f5",
+              marginTop: 2,
+            }}
           >
-            ✕
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M1 1l9 9M10 1L1 10" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
 
-        <div className="mb-6 space-y-3">
-          <span
-            className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${band.className}`}
-          >
-            {band.label}
-          </span>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            {feedback.summary}
-          </p>
+        {/* Summary */}
+        <div style={{ padding: "14px 22px 0" }}>
+          <p style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.72 }}>{feedback.summary}</p>
         </div>
 
+        {/* Filler words */}
         {feedback.overusedWords.length > 0 && (
-          <section className="mb-5">
-            <h3 className="mb-2 text-sm font-semibold">Filler words</h3>
-            <div className="flex flex-wrap gap-2">
-              {feedback.overusedWords.map((w, i) => (
-                <span
+          <>
+            <div style={divider} />
+            <div style={{ padding: "18px 22px 0" }}>
+              <div style={label}>Filler words detected</div>
+              <div className="flex flex-wrap" style={{ gap: 7 }}>
+                {feedback.overusedWords.map((word, i) => (
+                  <span
+                    key={i}
+                    style={{ padding: "6px 13px", background: "#fee2e2", color: "#b91c1c", borderRadius: 100, fontSize: 13, fontWeight: 600 }}
+                  >
+                    {word}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Better phrasings */}
+        {feedback.betterPhrasings.length > 0 && (
+          <>
+            <div style={divider} />
+            <div style={{ padding: "18px 22px 0" }}>
+              <div style={label}>Better phrasings</div>
+              {feedback.betterPhrasings.map((p, i) => (
+                <div
                   key={i}
-                  className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                  style={{ background: "#f9fafb", borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: "1px solid rgba(0,0,0,0.06)" }}
                 >
-                  {w}
-                </span>
+                  <div className="flex flex-wrap items-center" style={{ gap: 9 }}>
+                    <span style={{ fontSize: 13, color: "#9ca3af", textDecoration: "line-through" }}>
+                      {p.original}
+                    </span>
+                    <span style={{ fontSize: 13, color: "var(--fc)", fontWeight: 700 }}>→</span>
+                    <span style={{ fontSize: 13, color: "#262626", fontWeight: 600 }}>
+                      {p.suggestion}
+                    </span>
+                  </div>
+                </div>
               ))}
             </div>
-          </section>
+          </>
         )}
 
-        {feedback.betterPhrasings.length > 0 && (
-          <section className="mb-5">
-            <h3 className="mb-2 text-sm font-semibold">Better phrasings</h3>
-            <ul className="space-y-3">
-              {feedback.betterPhrasings.map((p, i) => (
-                <li
-                  key={i}
-                  className="rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
-                >
-                  <p className="text-zinc-400 line-through">{p.original}</p>
-                  <p className="text-green-600 dark:text-green-400">
-                    {p.suggestion}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <section>
-          <h3 className="mb-2 text-sm font-semibold">Focus on next</h3>
-          <p className="rounded-lg bg-secondary/10 p-3 text-sm text-secondary">
-            {feedback.focusArea}
-          </p>
-        </section>
+        {/* Focus area + CTA */}
+        <div style={{ ...divider, margin: "6px 22px 0" }} />
+        <div style={{ padding: "18px 22px 22px" }}>
+          <div style={label}>Focus area for next time</div>
+          <div
+            style={{
+              background: "rgba(var(--fc-rgb),0.07)",
+              border: "1.5px solid rgba(var(--fc-rgb),0.22)",
+              borderRadius: 14,
+              padding: "15px 17px",
+              marginBottom: 18,
+            }}
+          >
+            <div className="flex items-center" style={{ gap: 8 }}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--fc)", flexShrink: 0 }} />
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--fc)", lineHeight: 1.5 }}>
+                {feedback.focusArea}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              width: "100%",
+              padding: 14,
+              borderRadius: 100,
+              border: "none",
+              background: "var(--fc)",
+              color: "white",
+              fontSize: 15,
+              fontWeight: 700,
+              boxShadow: "0 3px 14px rgba(var(--fc-rgb),0.4)",
+              letterSpacing: "-0.2px",
+            }}
+          >
+            Got it — keep practicing
+          </button>
+        </div>
       </div>
     </div>
   );
