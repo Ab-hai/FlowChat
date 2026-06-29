@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 
 type Conversation = { id: string; title: string; time: string };
@@ -15,19 +15,45 @@ export function ChatSidebar({
   userName: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const close = () => setOpen(false);
   const initial = (userName.trim()[0] || "Y").toUpperCase();
   const dashActive = pathname === "/dashboard";
 
+  async function commitRename(id: string, value: string) {
+    setEditingId(null);
+    const title = value.trim();
+    const current = conversations.find((c) => c.id === id);
+    if (!title || (current && current.title === title)) return;
+    await fetch(`/api/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    router.refresh();
+  }
+
+  async function handleDelete(id: string) {
+    setMenuId(null);
+    if (!window.confirm("Delete this conversation? This can't be undone.")) return;
+    await fetch(`/api/conversations/${id}`, { method: "DELETE" });
+    if (pathname === `/chat/${id}`) router.push("/chat");
+    router.refresh();
+  }
+
   const nav = (
     <div className="flex h-full flex-col">
+      {menuId && (
+        <div onClick={() => setMenuId(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+      )}
+
       <div style={{ padding: "18px 14px 12px" }}>
         <div className="flex items-center" style={{ gap: 8, marginBottom: 18 }}>
           <Logo size={27} icon={13} />
-          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>
-            FlowChat
-          </span>
+          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>FlowChat</span>
         </div>
         <Link
           href="/dashboard"
@@ -91,43 +117,124 @@ export function ChatSidebar({
           Recent
         </div>
         {conversations.length === 0 ? (
-          <div style={{ fontSize: 12, color: "#9ca3af", padding: 4 }}>
-            No conversations yet.
-          </div>
+          <div style={{ fontSize: 12, color: "#9ca3af", padding: 4 }}>No conversations yet.</div>
         ) : (
           conversations.map((c) => {
             const active = pathname === `/chat/${c.id}`;
+            const editing = editingId === c.id;
             return (
-              <Link
-                key={c.id}
-                href={`/chat/${c.id}`}
-                onClick={close}
-                className="block"
-                style={{
-                  padding: "9px 11px",
-                  borderRadius: 10,
-                  marginBottom: 2,
-                  background: active ? "rgba(var(--fc-rgb),0.09)" : "transparent",
-                  border: active ? "1px solid rgba(var(--fc-rgb),0.17)" : "1px solid transparent",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: active ? 600 : 500,
-                    color: active ? "var(--fc)" : "#374151",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    marginBottom: 2,
-                  }}
-                >
-                  {c.title}
-                </div>
-                <div style={{ fontSize: 11, color: active ? "#e07050" : "#9ca3af" }}>
-                  {c.time}
-                </div>
-              </Link>
+              <div key={c.id} style={{ position: "relative", marginBottom: 2 }}>
+                {editing ? (
+                  <input
+                    autoFocus
+                    defaultValue={c.title}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename(c.id, e.currentTarget.value);
+                      else if (e.key === "Escape") setEditingId(null);
+                    }}
+                    onBlur={(e) => commitRename(c.id, e.currentTarget.value)}
+                    style={{
+                      width: "100%",
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      color: "#262626",
+                      padding: "8px 11px",
+                      borderRadius: 10,
+                      border: "1.5px solid var(--fc)",
+                      outline: "none",
+                      background: "white",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                ) : (
+                  <Link
+                    href={`/chat/${c.id}`}
+                    onClick={close}
+                    className="block"
+                    style={{
+                      padding: "9px 30px 9px 11px",
+                      borderRadius: 10,
+                      background: active ? "rgba(var(--fc-rgb),0.09)" : "transparent",
+                      border: active ? "1px solid rgba(var(--fc-rgb),0.17)" : "1px solid transparent",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: active ? 600 : 500,
+                        color: active ? "var(--fc)" : "#374151",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        marginBottom: 2,
+                      }}
+                    >
+                      {c.title}
+                    </div>
+                    <div style={{ fontSize: 11, color: active ? "#e07050" : "#9ca3af" }}>{c.time}</div>
+                  </Link>
+                )}
+
+                {!editing && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMenuId(menuId === c.id ? null : c.id);
+                    }}
+                    aria-label="Conversation options"
+                    className="flex items-center justify-center hover:bg-black/10 hover:opacity-100"
+                    style={{ position: "absolute", right: 5, top: 7, width: 22, height: 22, borderRadius: 6, border: "none", background: "transparent", opacity: 0.6, cursor: "pointer" }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <circle cx="3" cy="7" r="1.2" fill="#6b7280" />
+                      <circle cx="7" cy="7" r="1.2" fill="#6b7280" />
+                      <circle cx="11" cy="7" r="1.2" fill="#6b7280" />
+                    </svg>
+                  </button>
+                )}
+
+                {menuId === c.id && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 4,
+                      top: 30,
+                      width: 134,
+                      background: "white",
+                      borderRadius: 10,
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+                      zIndex: 50,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        setEditingId(c.id);
+                        setMenuId(null);
+                      }}
+                      className="flex w-full items-center hover:bg-black/[0.04]"
+                      style={{ gap: 8, padding: "9px 12px", border: "none", background: "transparent", fontSize: 12.5, color: "#374151", textAlign: "left", cursor: "pointer" }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M8.5 1.7l2.8 2.8L4 11.8l-3 .5.5-3 7-7.6z" stroke="#6b7280" strokeWidth="1.1" strokeLinejoin="round" />
+                      </svg>
+                      Rename
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      className="flex w-full items-center hover:bg-[#fef2f2]"
+                      style={{ gap: 8, padding: "9px 12px", border: "none", background: "transparent", fontSize: 12.5, color: "#dc2626", textAlign: "left", cursor: "pointer" }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M2.5 3.5h8M5 3.5V2.4h3v1.1M3.6 3.5l.4 8h5l.4-8" stroke="#dc2626" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })
         )}
@@ -137,12 +244,7 @@ export function ChatSidebar({
         <div className="flex items-center" style={{ gap: 9 }}>
           <div
             className="flex shrink-0 items-center justify-center"
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg,var(--fc),#f07050)",
-            }}
+            style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,var(--fc),#f07050)" }}
           >
             <span style={{ fontSize: 12, fontWeight: 700, color: "white" }}>{initial}</span>
           </div>
@@ -170,22 +272,10 @@ export function ChatSidebar({
 
   return (
     <>
-      <aside
-        className="hidden shrink-0 sm:block"
-        style={{
-          width: 248,
-          background: "white",
-          borderRight: "1px solid rgba(0,0,0,0.07)",
-          boxShadow: "2px 0 16px rgba(0,0,0,0.04)",
-        }}
-      >
-        {nav}
-      </aside>
-
       <button
         onClick={() => setOpen(true)}
         aria-label="Open menu"
-        className="fixed left-3 top-2.5 z-20 flex items-center justify-center sm:hidden"
+        className="fixed left-3 top-2.5 z-20 flex items-center justify-center"
         style={{
           width: 38,
           height: 38,
@@ -203,12 +293,12 @@ export function ChatSidebar({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-30 sm:hidden">
+        <div className="fixed inset-0 z-30">
           <div className="absolute inset-0 bg-black/40" onClick={close} />
           <aside
             className="absolute left-0 top-0 h-full"
             style={{
-              width: 248,
+              width: 420,
               background: "white",
               borderRight: "1px solid rgba(0,0,0,0.07)",
               boxShadow: "0 0 40px rgba(0,0,0,0.25)",

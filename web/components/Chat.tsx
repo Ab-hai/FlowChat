@@ -6,6 +6,26 @@ import { FeedbackPanel, type Debrief, type Pronunciation } from "@/components/Fe
 import { VoiceButton } from "@/components/VoiceButton";
 import { Logo } from "@/components/Logo";
 import { recordUtterance, webmToWav16k, type Recorder } from "@/lib/audio";
+import { topics } from "@/lib/topics";
+import { ActionSearchBar, type Action } from "@/components/ui/action-search-bar";
+import { Briefcase, Coffee, MessageCircle, Plane, Users, Utensils } from "lucide-react";
+
+const TOPIC_ICONS: Record<string, React.ReactNode> = {
+  interview: <Briefcase className="h-4 w-4" style={{ color: "var(--fc)" }} />,
+  restaurant: <Utensils className="h-4 w-4" style={{ color: "var(--fc)" }} />,
+  smalltalk: <Coffee className="h-4 w-4" style={{ color: "var(--fc)" }} />,
+  standup: <Users className="h-4 w-4" style={{ color: "var(--fc)" }} />,
+  travel: <Plane className="h-4 w-4" style={{ color: "var(--fc)" }} />,
+  free: <MessageCircle className="h-4 w-4" style={{ color: "var(--fc)" }} />,
+};
+
+const TOPIC_ACTIONS: Action[] = topics.map((t) => ({
+  id: t.id,
+  label: t.title,
+  description: t.desc,
+  end: "Scenario",
+  icon: TOPIC_ICONS[t.id],
+}));
 
 type Msg = { role: "user" | "assistant"; content: string; time?: string };
 type VoiceStatus = "idle" | "listening" | "thinking" | "speaking";
@@ -105,6 +125,7 @@ export function Chat({
   const [voiceMode, setVoiceMode] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   const conversationId = useRef<string | null>(initialConversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -275,13 +296,31 @@ export function Chat({
     }
   }
 
+  async function startTopic(topicId: string) {
+    if (starting) return;
+    setStarting(true);
+    try {
+      const res = await fetch("/api/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topicId }),
+      });
+      if (!res.ok) throw new Error();
+      const { conversationId } = await res.json();
+      router.push(`/chat/${conversationId}`);
+      router.refresh();
+    } catch {
+      setStarting(false);
+    }
+  }
+
   const subtitle = voiceError || feedbackError;
 
   return (
     <div className="flex h-full flex-col" style={{ overflow: "hidden", position: "relative" }}>
       {/* Top bar */}
       <div
-        className="flex shrink-0 items-center justify-between px-[22px] py-[14px] max-sm:pl-16"
+        className="flex shrink-0 items-center justify-between py-[14px] pr-[22px] pl-16"
         style={{
           background: "rgba(245,243,247,0.96)",
           backdropFilter: "blur(10px)",
@@ -365,11 +404,21 @@ export function Chat({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto" style={{ padding: "22px 0" }}>
         {messages.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-center" style={{ color: "#9ca3af", padding: "0 24px" }}>
-            <p style={{ maxWidth: 360, fontSize: 14.5, lineHeight: 1.6 }}>
-              Say hi to start practicing. Talk about anything — your day, a movie,
-              your work. I&apos;ll keep the conversation going.
-            </p>
+          <div className="flex h-full flex-col items-center justify-center" style={{ padding: "0 24px" }}>
+            <div style={{ width: "100%", maxWidth: 480 }}>
+              <h2 style={{ fontSize: 19, fontWeight: 800, color: "#262626", textAlign: "center", letterSpacing: "-0.4px", marginBottom: 5 }}>
+                What would you like to practice?
+              </h2>
+              <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", marginBottom: 18 }}>
+                Pick a scenario, or type your own opening line.
+              </p>
+              <ActionSearchBar
+                actions={TOPIC_ACTIONS}
+                onSelect={(a) => startTopic(a.id)}
+                onSubmit={(q) => void runTurn(q)}
+                pending={starting}
+              />
+            </div>
           </div>
         ) : (
           messages.map((m, i) => {
@@ -489,7 +538,7 @@ export function Chat({
         </div>
       )}
 
-      {/* Input */}
+      {messages.length > 0 && (
       <div className="shrink-0" style={{ padding: "14px 22px 18px", background: "rgba(245,243,247,0.96)" }}>
         <div
           className="flex items-end"
@@ -525,6 +574,7 @@ export function Chat({
           </span>
         </div>
       </div>
+      )}
 
       {feedback && (
         <FeedbackPanel feedback={feedback} pronunciation={pronSummary} onClose={() => setFeedback(null)} />
