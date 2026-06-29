@@ -1,7 +1,9 @@
+import base64
 import json
 import os
 from typing import Literal
 
+import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -146,5 +148,80 @@ async def transcribe(audio: UploadFile = File(...)):
     result = await client.audio.transcriptions.create(
         model="whisper-large-v3-turbo",
         file=(audio.filename or "audio.webm", data),
+        language="en",
     )
     return {"text": result.text}
+
+
+PRONUNCIATION_PROMPT = (
+    "You are an English pronunciation coach. The attached audio is a short clip of "
+    "a language learner speaking spontaneously. Listen to HOW they speak — not just "
+    "the words. Reply with a JSON object using exactly these keys: "
+    '"accuracy" (integer 0-100, how clear and correct their pronunciation of sounds '
+    'and words is), '
+    '"fluency" (integer 0-100, smoothness, pace, and pauses), '
+    '"prosody" (integer 0-100, natural intonation, stress, and rhythm), '
+    'and "words" (array of up to 5 objects {"word": <a word they mispronounced or '
+    'that sounded unclear>, "issue": <a short, specific tip>}; empty array if none). '
+    "Be encouraging and concrete. If the audio is silent or unclear, use low scores "
+    "and an empty words array. Output only the JSON object."
+)
+
+
+@app.post("/pronounce")
+async def pronounce(audio: UploadFile = File(...)):
+    """Assess the user's spoken delivery by having Gemini listen to the audio.
+
+    Returns rough accuracy / fluency / prosody scores (0-100) plus specific words
+    to work on — a qualitative pronunciation coach rather than phoneme scoring.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not set")
+
+    data = await audio.read()
+    audio_b64 = base64.b64encode(data).decode()
+
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.0-flash:generateContent?key={api_key}"
+    )
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"inline_data": {"mime_type": "audio/wav", "data": audio_b64}},
+                    {"text": PRONUNCIATION_PROMPT},
+                ]
+            }
+        ],
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2},
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(url, json=payload)
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Gemini error {resp.status_code}")
+
+    try:
+        body = resp.json()
+        text = body["candidates"][0]["content"]["parts"][0]["text"]
+        parsed = json.loads(text)
+    except Exception:
+        raise HTTPException(
+            status_code=502, detail="Could not parse pronunciation result"
+        )
+
+    words = [
+        {"word": w.get("word"), "accuracy": None, "error": w.get("issue")}
+        for w in (parsed.get("words") or [])
+        if isinstance(w, dict) and w.get("word")
+    ]
+    return {
+        "recognized": "",
+        "accuracy": parsed.get("accuracy"),
+        "fluency": parsed.get("fluency"),
+        "prosody": parsed.get("prosody"),
+        "words": words,
+    }

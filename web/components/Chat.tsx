@@ -2,44 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FeedbackPanel, type Debrief } from "@/components/FeedbackPanel";
+import { FeedbackPanel, type Debrief, type Pronunciation } from "@/components/FeedbackPanel";
 import { VoiceButton } from "@/components/VoiceButton";
 import { Logo } from "@/components/Logo";
+import { recordUtterance, webmToWav16k, type Recorder } from "@/lib/audio";
 
 type Msg = { role: "user" | "assistant"; content: string; time?: string };
-
 type VoiceStatus = "idle" | "listening" | "thinking" | "speaking";
 
-type SpeechRecognitionLike = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((e: SpeechResultLike) => void) | null;
-  onerror: ((e: { error?: string }) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
+type PronWord = { word: string | null; accuracy: number | null; error: string | null };
+type PronTurn = {
+  accuracy: number | null;
+  fluency: number | null;
+  prosody: number | null;
+  words: PronWord[];
 };
-
-type SpeechResultLike = {
-  results: { length: number; [i: number]: { [j: number]: { transcript: string } } };
-};
-
-function createRecognition(): SpeechRecognitionLike | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-  };
-  const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-  if (!Ctor) return null;
-  const rec = new Ctor();
-  rec.lang = "en-US";
-  rec.continuous = false;
-  rec.interimResults = false;
-  return rec;
-}
 
 function speak(text: string): Promise<void> {
   return new Promise((resolve) => {
@@ -57,10 +34,32 @@ function nowClock() {
   return new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+function aggregatePron(turns: PronTurn[]): Pronunciation | null {
+  if (!turns.length) return null;
+  const mean = (vals: (number | null)[]) => {
+    const nums = vals.filter((v): v is number => typeof v === "number");
+    return nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+  };
+  const words: string[] = [];
+  for (const t of turns) {
+    for (const w of t.words ?? []) {
+      if (w.word && w.error && w.error !== "None" && !words.includes(w.word)) {
+        words.push(w.word);
+      }
+    }
+  }
+  return {
+    accuracy: mean(turns.map((t) => t.accuracy)),
+    fluency: mean(turns.map((t) => t.fluency)),
+    prosody: mean(turns.map((t) => t.prosody)),
+    words: words.slice(0, 6),
+  };
+}
+
 const VOICE_COPY: Record<VoiceStatus, { label: string; sub: string }> = {
   idle: { label: "Starting…", sub: "" },
-  listening: { label: "Listening…", sub: "Speak naturally — I'm all ears" },
-  thinking: { label: "Thinking…", sub: "Give me just a moment" },
+  listening: { label: "Listening…", sub: "Speak, then pause — or tap to finish" },
+  thinking: { label: "Thinking…", sub: "Scoring how you sounded" },
   speaking: { label: "Speaking…", sub: "FlowChat is responding" },
 };
 
@@ -100,6 +99,7 @@ export function Chat({
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [feedback, setFeedback] = useState<Debrief | null>(null);
+  const [pronSummary, setPronSummary] = useState<Pronunciation | null>(null);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
@@ -109,7 +109,8 @@ export function Chat({
   const conversationId = useRef<string | null>(initialConversationId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const voiceModeRef = useRef(false);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const recorderRef = useRef<Recorder | null>(null);
+  const pronScoresRef = useRef<PronTurn[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -194,6 +195,7 @@ export function Chat({
         body: JSON.stringify({ conversationId: cid }),
       });
       if (!res.ok) throw new Error();
+      setPronSummary(aggregatePron(pronScoresRef.current));
       setFeedback((await res.json()) as Debrief);
     } catch {
       setFeedbackError("Couldn't generate feedback. Try again.");
@@ -202,79 +204,72 @@ export function Chat({
     }
   }
 
-  function listenTurn() {
-    const rec = recognitionRef.current;
-    if (!rec || !voiceModeRef.current) return;
-    setVoiceStatus("listening");
-    let heard = "";
+  async function transcribeBlob(blob: Blob): Promise<string> {
+    const form = new FormData();
+    form.append("audio", blob, "audio.webm");
+    const res = await fetch("/api/transcribe", { method: "POST", body: form });
+    if (!res.ok) return "";
+    const { text } = await res.json();
+    return (text || "").trim();
+  }
 
-    rec.onresult = (e) => {
-      const last = e.results[e.results.length - 1];
-      heard = last[0].transcript;
-    };
-    rec.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-        setVoiceError("Microphone access is blocked in your browser settings.");
-        voiceModeRef.current = false;
-      }
-    };
-    rec.onend = async () => {
-      if (!voiceModeRef.current) {
-        setVoiceMode(false);
-        setVoiceStatus("idle");
-        return;
-      }
-      const text = heard.trim();
-      if (!text) {
-        listenTurn();
-        return;
-      }
-      setVoiceStatus("thinking");
-      const reply = await runTurn(text);
-      if (!voiceModeRef.current) {
-        setVoiceMode(false);
-        setVoiceStatus("idle");
-        return;
-      }
-      setVoiceStatus("speaking");
-      await speak(reply);
-      if (!voiceModeRef.current) {
-        setVoiceMode(false);
-        setVoiceStatus("idle");
-        return;
-      }
-      listenTurn();
-    };
-
+  async function pronounceBlob(blob: Blob): Promise<PronTurn | null> {
     try {
-      rec.start();
+      const wav = await webmToWav16k(blob);
+      const form = new FormData();
+      form.append("audio", wav, "audio.wav");
+      const res = await fetch("/api/pronounce", { method: "POST", body: form });
+      if (!res.ok) return null;
+      return (await res.json()) as PronTurn;
     } catch {
-      // already started
+      return null;
     }
   }
 
-  function startVoiceMode() {
-    const rec = createRecognition();
-    if (!rec) {
-      setVoiceError("Voice mode needs Chrome or Edge.");
-      return;
+  async function voiceLoop() {
+    while (voiceModeRef.current) {
+      setVoiceStatus("listening");
+      let rec: Recorder;
+      try {
+        rec = await recordUtterance();
+      } catch {
+        setVoiceError("Microphone access is blocked in your browser settings.");
+        break;
+      }
+      recorderRef.current = rec;
+      const blob = await rec.done;
+      recorderRef.current = null;
+      if (!voiceModeRef.current) break;
+      if (!blob) continue;
+
+      setVoiceStatus("thinking");
+      const [text, pron] = await Promise.all([transcribeBlob(blob), pronounceBlob(blob)]);
+      if (pron) pronScoresRef.current.push(pron);
+      if (!voiceModeRef.current) break;
+      if (!text) continue;
+
+      const reply = await runTurn(text);
+      if (!voiceModeRef.current) break;
+      setVoiceStatus("speaking");
+      await speak(reply);
     }
+    voiceModeRef.current = false;
+    setVoiceMode(false);
+    setVoiceStatus("idle");
+  }
+
+  function startVoiceMode() {
     setVoiceError(null);
-    recognitionRef.current = rec;
     voiceModeRef.current = true;
     setVoiceMode(true);
-    listenTurn();
+    voiceLoop();
   }
 
   function stopVoiceMode() {
     voiceModeRef.current = false;
     setVoiceMode(false);
     setVoiceStatus("idle");
-    try {
-      recognitionRef.current?.abort();
-    } catch {
-      // ignore
-    }
+    recorderRef.current?.cancel();
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -307,13 +302,7 @@ export function Chat({
           >
             {initialTitle}
           </div>
-          <div
-            style={{
-              fontSize: 11.5,
-              marginTop: 1,
-              color: subtitle ? "#dc2626" : "#9ca3af",
-            }}
-          >
+          <div style={{ fontSize: 11.5, marginTop: 1, color: subtitle ? "#dc2626" : "#9ca3af" }}>
             {subtitle || "Practice session"}
           </div>
         </div>
@@ -376,10 +365,7 @@ export function Chat({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto" style={{ padding: "22px 0" }}>
         {messages.length === 0 ? (
-          <div
-            className="flex h-full items-center justify-center text-center"
-            style={{ color: "#9ca3af", padding: "0 24px" }}
-          >
+          <div className="flex h-full items-center justify-center text-center" style={{ color: "#9ca3af", padding: "0 24px" }}>
             <p style={{ maxWidth: 360, fontSize: 14.5, lineHeight: 1.6 }}>
               Say hi to start practicing. Talk about anything — your day, a movie,
               your work. I&apos;ll keep the conversation going.
@@ -391,11 +377,7 @@ export function Chat({
             const waiting = isLast && m.role === "assistant" && m.content === "" && isStreaming;
             if (m.role === "assistant") {
               return (
-                <div
-                  key={i}
-                  className="flex justify-start"
-                  style={{ padding: "0 22px", marginBottom: 16, animation: "fadeUp 0.2s ease both" }}
-                >
+                <div key={i} className="flex justify-start" style={{ padding: "0 22px", marginBottom: 16, animation: "fadeUp 0.2s ease both" }}>
                   <div className="flex items-start" style={{ gap: 9, maxWidth: "74%" }}>
                     <div style={{ marginTop: 2 }}>
                       <AiAvatar />
@@ -417,9 +399,7 @@ export function Chat({
                         {waiting ? <TypingDots /> : m.content}
                       </div>
                       {!waiting && m.time && (
-                        <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 4, paddingLeft: 4 }}>
-                          {m.time}
-                        </div>
+                        <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 4, paddingLeft: 4 }}>{m.time}</div>
                       )}
                     </div>
                   </div>
@@ -427,11 +407,7 @@ export function Chat({
               );
             }
             return (
-              <div
-                key={i}
-                className="flex justify-end"
-                style={{ padding: "0 22px", marginBottom: 16, animation: "fadeUp 0.2s ease both" }}
-              >
+              <div key={i} className="flex justify-end" style={{ padding: "0 22px", marginBottom: 16, animation: "fadeUp 0.2s ease both" }}>
                 <div style={{ maxWidth: "74%" }}>
                   <div
                     style={{
@@ -448,9 +424,7 @@ export function Chat({
                     {m.content}
                   </div>
                   {m.time && (
-                    <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 4, textAlign: "right", paddingRight: 4 }}>
-                      {m.time}
-                    </div>
+                    <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 4, textAlign: "right", paddingRight: 4 }}>{m.time}</div>
                   )}
                 </div>
               </div>
@@ -464,52 +438,25 @@ export function Chat({
       {voiceMode && (
         <div
           className="absolute flex items-center justify-center"
-          style={{
-            inset: 0,
-            top: 59,
-            background: "rgba(245,243,247,0.97)",
-            backdropFilter: "blur(10px)",
-            zIndex: 20,
-            animation: "fadeUp 0.2s ease both",
-          }}
+          style={{ inset: 0, top: 59, background: "rgba(245,243,247,0.97)", backdropFilter: "blur(10px)", zIndex: 20, animation: "fadeUp 0.2s ease both" }}
         >
           <div className="flex flex-col items-center" style={{ gap: 28 }}>
-            <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: "50%",
-                  background: "rgba(var(--fc-rgb),0.1)",
-                  animation: "pulseRing 2s ease-in-out infinite",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 10,
-                  borderRadius: "50%",
-                  background: "rgba(var(--fc-rgb),0.16)",
-                  animation: "pulseRing 2s ease-in-out infinite 0.38s",
-                }}
-              />
-              <div
-                className="flex items-center justify-center"
-                style={{
-                  position: "absolute",
-                  inset: 20,
-                  borderRadius: "50%",
-                  background: "var(--fc)",
-                  boxShadow: "0 4px 20px rgba(var(--fc-rgb),0.44)",
-                }}
-              >
+            <button
+              onClick={() => recorderRef.current?.stop()}
+              aria-label="Finish speaking"
+              className="relative flex items-center justify-center"
+              style={{ width: 96, height: 96, background: "transparent", border: "none" }}
+            >
+              <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(var(--fc-rgb),0.1)", animation: "pulseRing 2s ease-in-out infinite" }} />
+              <div style={{ position: "absolute", inset: 10, borderRadius: "50%", background: "rgba(var(--fc-rgb),0.16)", animation: "pulseRing 2s ease-in-out infinite 0.38s" }} />
+              <div className="flex items-center justify-center" style={{ position: "absolute", inset: 20, borderRadius: "50%", background: "var(--fc)", boxShadow: "0 4px 20px rgba(var(--fc-rgb),0.44)" }}>
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
                   <rect x="7.5" y="2" width="7" height="11" rx="3.5" fill="white" />
                   <path d="M4 11c0 3.87 3.13 7 7 7s7-3.13 7-7" stroke="white" strokeWidth="2" strokeLinecap="round" />
                   <path d="M11 18v2" stroke="white" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </div>
-            </div>
+            </button>
             <div className="flex items-center" style={{ gap: 5, height: 44 }}>
               {[30, 44, 24, 38, 20, 40, 18].map((hgt, i) => (
                 <div
@@ -520,7 +467,8 @@ export function Chat({
                     borderRadius: 3,
                     background: "var(--fc)",
                     transformOrigin: "center",
-                    animation: `waveAnim 1s ease-in-out infinite ${i * 0.1}s`,
+                    animation: voiceStatus === "listening" ? `waveAnim 1s ease-in-out infinite ${i * 0.1}s` : "none",
+                    opacity: voiceStatus === "listening" ? 1 : 0.3,
                   }}
                 />
               ))}
@@ -529,22 +477,11 @@ export function Chat({
               <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px", color: "#262626" }}>
                 {VOICE_COPY[voiceStatus].label}
               </div>
-              <div style={{ fontSize: 14, color: "#6b7280", marginTop: 5 }}>
-                {VOICE_COPY[voiceStatus].sub}
-              </div>
+              <div style={{ fontSize: 14, color: "#6b7280", marginTop: 5 }}>{VOICE_COPY[voiceStatus].sub}</div>
             </div>
             <button
               onClick={stopVoiceMode}
-              style={{
-                padding: "10px 24px",
-                borderRadius: 100,
-                border: "1.5px solid rgba(0,0,0,0.12)",
-                background: "white",
-                color: "#262626",
-                fontSize: 14,
-                fontWeight: 500,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              }}
+              style={{ padding: "10px 24px", borderRadius: 100, border: "1.5px solid rgba(0,0,0,0.12)", background: "white", color: "#262626", fontSize: 14, fontWeight: 500, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
             >
               End voice session
             </button>
@@ -556,14 +493,7 @@ export function Chat({
       <div className="shrink-0" style={{ padding: "14px 22px 18px", background: "rgba(245,243,247,0.96)" }}>
         <div
           className="flex items-end"
-          style={{
-            background: "white",
-            borderRadius: 15,
-            border: "1.5px solid rgba(0,0,0,0.1)",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.07)",
-            gap: 8,
-            padding: "9px 9px 9px 15px",
-          }}
+          style={{ background: "white", borderRadius: 15, border: "1.5px solid rgba(0,0,0,0.1)", boxShadow: "0 4px 20px rgba(0,0,0,0.07)", gap: 8, padding: "9px 9px 9px 15px" }}
         >
           <textarea
             value={input}
@@ -571,20 +501,7 @@ export function Chat({
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             rows={1}
-            style={{
-              flex: 1,
-              border: "none",
-              background: "transparent",
-              fontFamily: "inherit",
-              fontSize: 14.5,
-              color: "#262626",
-              resize: "none",
-              maxHeight: 110,
-              padding: "4px 0",
-              lineHeight: 1.55,
-              outline: "none",
-              caretColor: "var(--fc)",
-            }}
+            style={{ flex: 1, border: "none", background: "transparent", fontFamily: "inherit", fontSize: 14.5, color: "#262626", resize: "none", maxHeight: 110, padding: "4px 0", lineHeight: 1.55, outline: "none", caretColor: "var(--fc)" }}
           />
           <VoiceButton
             onTranscript={(t) => setInput((prev) => (prev ? prev.trim() + " " + t : t))}
@@ -595,15 +512,7 @@ export function Chat({
             disabled={isStreaming || !input.trim()}
             aria-label="Send"
             className="flex shrink-0 items-center justify-center"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 9,
-              border: "none",
-              background: "var(--fc)",
-              boxShadow: "0 2px 8px rgba(var(--fc-rgb),0.35)",
-              opacity: isStreaming || !input.trim() ? 0.5 : 1,
-            }}
+            style={{ width: 36, height: 36, borderRadius: 9, border: "none", background: "var(--fc)", boxShadow: "0 2px 8px rgba(var(--fc-rgb),0.35)", opacity: isStreaming || !input.trim() ? 0.5 : 1 }}
           >
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <path d="M2 7.5h11M9 3.5l4 4-4 4" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -617,7 +526,9 @@ export function Chat({
         </div>
       </div>
 
-      {feedback && <FeedbackPanel feedback={feedback} onClose={() => setFeedback(null)} />}
+      {feedback && (
+        <FeedbackPanel feedback={feedback} pronunciation={pronSummary} onClose={() => setFeedback(null)} />
+      )}
     </div>
   );
 }

@@ -18,7 +18,11 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <html
+        lang="en"
+        className={`${inter.variable} h-full antialiased`}
+        style={{ "--fc": "#d14925", "--fc-rgb": "209, 73, 37" } as React.CSSProperties}
+      >
         <body className="min-h-full">{children}</body>
       </html>
     </ClerkProvider>

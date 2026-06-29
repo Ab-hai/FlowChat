@@ -12,6 +12,13 @@ export type Debrief = {
   focusArea: string;
 };
 
+export type Pronunciation = {
+  accuracy: number | null;
+  fluency: number | null;
+  prosody: number | null;
+  words: string[];
+};
+
 const label = {
   fontSize: 10.5,
   fontWeight: 600,
@@ -25,12 +32,19 @@ const divider = { height: 1, background: "rgba(0,0,0,0.06)", margin: "18px 22px 
 
 export function FeedbackPanel({
   feedback,
+  pronunciation,
   onClose,
 }: {
   feedback: Debrief;
+  pronunciation?: Pronunciation | null;
   onClose: () => void;
 }) {
   const band = clarityBand(feedback.clarityScore);
+  const hasPron =
+    pronunciation != null &&
+    (pronunciation.accuracy != null ||
+      pronunciation.fluency != null ||
+      pronunciation.prosody != null);
 
   return (
     <div
@@ -96,6 +110,48 @@ export function FeedbackPanel({
         <div style={{ padding: "14px 22px 0" }}>
           <p style={{ fontSize: 14, color: "#4b5563", lineHeight: 1.72 }}>{feedback.summary}</p>
         </div>
+
+        {/* Pronunciation (voice mode only) */}
+        {hasPron && pronunciation && (
+          <>
+            <div style={divider} />
+            <div style={{ padding: "18px 22px 0" }}>
+              <div style={label}>How you sounded</div>
+              <div className="flex" style={{ gap: 8 }}>
+                {[
+                  { l: "Accuracy", v: pronunciation.accuracy },
+                  { l: "Fluency", v: pronunciation.fluency },
+                  { l: "Prosody", v: pronunciation.prosody },
+                ].map((x) => (
+                  <div
+                    key={x.l}
+                    style={{ flex: 1, background: "#f9fafb", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}
+                  >
+                    <div style={{ fontSize: 18, fontWeight: 800, color: x.v == null ? "#9ca3af" : clarityBand(x.v).color }}>
+                      {x.v == null ? "—" : Math.round(x.v)}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{x.l}</div>
+                  </div>
+                ))}
+              </div>
+              {pronunciation.words.length > 0 && (
+                <>
+                  <div style={{ ...label, marginTop: 14 }}>Sounds to work on</div>
+                  <div className="flex flex-wrap" style={{ gap: 7 }}>
+                    {pronunciation.words.map((w, i) => (
+                      <span
+                        key={i}
+                        style={{ padding: "6px 13px", background: "#fee2e2", color: "#b91c1c", borderRadius: 100, fontSize: 13, fontWeight: 600 }}
+                      >
+                        {w}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Filler words */}
         {feedback.overusedWords.length > 0 && (
