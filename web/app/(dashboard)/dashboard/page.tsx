@@ -21,11 +21,32 @@ const sectionLabel = {
   letterSpacing: "0.5px",
 } as const;
 
+const statValueBox = {
+  height: 30,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+} as const;
+
+const statCaption = {
+  fontSize: 10.5,
+  fontWeight: 600,
+  color: "#9ca3af",
+  textTransform: "uppercase",
+  letterSpacing: "0.4px",
+  marginTop: 4,
+} as const;
+
 export default async function DashboardPage() {
   const user = await getOrCreateDbUser();
 
-  const [conversationCount, feedbacks] = await Promise.all([
-    user ? prisma.conversation.count({ where: { userId: user.id } }) : 0,
+  const [conversations, feedbacks] = await Promise.all([
+    user
+      ? prisma.conversation.findMany({
+          where: { userId: user.id },
+          select: { createdAt: true },
+        })
+      : [],
     user
       ? prisma.feedback.findMany({
           where: { conversation: { userId: user.id } },
@@ -40,6 +61,8 @@ export default async function DashboardPage() {
         })
       : [],
   ]);
+
+  const totalSessions = conversations.length;
 
   const chartData = feedbacks.slice(-7).map((f) => ({
     score: f.clarityScore,
@@ -69,19 +92,44 @@ export default async function DashboardPage() {
     .slice(0, 6)
     .map(([w]) => w);
 
-  const monthYear = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  // Clarity aggregates — shown as bands (raw scores stay hidden by design).
+  const scores = feedbacks.map((f) => f.clarityScore);
+  const avgBand = scores.length
+    ? clarityBand(Math.round(scores.reduce((a, b) => a + b, 0) / scores.length))
+    : null;
+  const bestBand = scores.length ? clarityBand(Math.max(...scores)) : null;
+
+  // Day streak: consecutive calendar days (ending today/yesterday) with a session.
+  const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const activeDays = new Set(conversations.map((c) => dayKey(new Date(c.createdAt))));
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  if (!activeDays.has(dayKey(cursor))) {
+    cursor.setDate(cursor.getDate() - 1); // a streak that ended yesterday still counts
+  }
+  while (activeDays.has(dayKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
   const userName = user?.name || user?.email?.split("@")[0] || "You";
+  const initial = userName.trim()[0]?.toUpperCase() || "Y";
 
   return (
     <main className="flex-1 overflow-y-auto" style={{ padding: "10px 26px 48px" }}>
       <div className="mx-auto" style={{ maxWidth: 980 }}>
-        <div className="mb-[22px] pl-12">
+        <div className="mb-4 pl-12">
           <div className="flex items-center justify-between" style={{ minHeight: 38 }}>
             <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.6px", color: "#262626" }}>
-              Your progress
+              Profile
             </h1>
             <div className="flex shrink-0 items-center" style={{ gap: 10 }}>
               <Link
@@ -98,17 +146,100 @@ export default async function DashboardPage() {
                   boxShadow: "0 2px 10px rgba(var(--fc-rgb),0.35)",
                 }}
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M6 1v5.5L8.5 9" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
+                  <circle cx="7" cy="7" r="5.6" stroke="white" strokeWidth="1.6" />
+                  <path d="M7 3.8V7l2.1 1.6" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 New session
               </Link>
               <UserMenu userName={userName} />
             </div>
           </div>
-          <p style={{ fontSize: 13, color: "#9ca3af"}}>
-            {conversationCount} session{conversationCount === 1 ? "" : "s"} tracked · {monthYear}
-          </p>
+        </div>
+
+        {/* Identity + headline stats */}
+        <div style={{ ...cardStyle, padding: 20, marginBottom: 16 }}>
+          <div className="flex items-center" style={{ gap: 14 }}>
+            <div
+              className="flex shrink-0 items-center justify-center"
+              style={{
+                width: 54,
+                height: 54,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg,var(--fc),#f07050)",
+              }}
+            >
+              <span style={{ fontSize: 22, fontWeight: 700, color: "white" }}>{initial}</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  letterSpacing: "-0.4px",
+                  color: "#262626",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {userName}
+              </div>
+              {user?.email && (
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "#9ca3af",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {user.email}
+                </div>
+              )}
+              {memberSince && (
+                <div style={{ fontSize: 12, color: "#b0b4bb", marginTop: 3 }}>
+                  Member since {memberSince}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "18px 0" }} />
+
+          <div className="grid grid-cols-2 sm:grid-cols-4" style={{ gap: 12 }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={statValueBox}>
+                <span style={{ fontSize: 22, fontWeight: 800, color: "#262626" }}>{totalSessions}</span>
+              </div>
+              <div style={statCaption}>Sessions</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={statValueBox}>
+                <span style={{ fontSize: 22, fontWeight: 800, color: streak > 0 ? "var(--fc)" : "#262626" }}>
+                  {streak}
+                </span>
+              </div>
+              <div style={statCaption}>Day streak</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={statValueBox}>
+                <span style={{ fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, color: avgBand ? avgBand.color : "#9ca3af" }}>
+                  {avgBand ? avgBand.label : "—"}
+                </span>
+              </div>
+              <div style={statCaption}>Avg clarity</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={statValueBox}>
+                <span style={{ fontSize: 14.5, fontWeight: 800, lineHeight: 1.15, color: bestBand ? bestBand.color : "#9ca3af" }}>
+                  {bestBand ? bestBand.label : "—"}
+                </span>
+              </div>
+              <div style={statCaption}>Best clarity</div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_308px]">

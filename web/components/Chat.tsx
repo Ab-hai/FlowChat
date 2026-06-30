@@ -8,6 +8,7 @@ import { Logo } from "@/components/Logo";
 import { recordUtterance, webmToWav16k, type Recorder } from "@/lib/audio";
 import { topics } from "@/lib/topics";
 import { ActionSearchBar, type Action } from "@/components/ui/action-search-bar";
+import RotatingText from "@/components/ui/rotating-text";
 import { Briefcase, Coffee, MessageCircle, Plane, Users, Utensils } from "lucide-react";
 
 const TOPIC_ICONS: Record<string, React.ReactNode> = {
@@ -26,6 +27,8 @@ const TOPIC_ACTIONS: Action[] = topics.map((t) => ({
   end: "Scenario",
   icon: TOPIC_ICONS[t.id],
 }));
+
+const ROTATING_PHRASES: string[] = topics.map((t) => t.practiceLabel);
 
 type Msg = { role: "user" | "assistant"; content: string; time?: string };
 type VoiceStatus = "idle" | "listening" | "thinking" | "speaking";
@@ -320,11 +323,13 @@ export function Chat({
     <div className="flex h-full flex-col" style={{ overflow: "hidden", position: "relative" }}>
       {/* Top bar */}
       <div
-        className="flex shrink-0 items-center justify-between py-[14px] pr-[22px] pl-16"
+        className="flex shrink-0 items-center justify-between pr-[22px] pl-16"
         style={{
           background: "rgba(245,243,247,0.96)",
           backdropFilter: "blur(10px)",
           borderBottom: "1px solid rgba(0,0,0,0.07)",
+          paddingTop: 11,
+          paddingBottom: 11,
         }}
       >
         <div style={{ minWidth: 0 }}>
@@ -406,9 +411,32 @@ export function Chat({
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center" style={{ padding: "0 24px" }}>
             <div style={{ width: "100%", maxWidth: 480 }}>
-              <h2 style={{ fontSize: 19, fontWeight: 800, color: "#262626", textAlign: "center", letterSpacing: "-0.4px", marginBottom: 5 }}>
-                What would you like to practice?
-              </h2>
+              <div className="flex flex-col items-center" style={{ marginBottom: 7 }}>
+                <span style={{ fontSize: 20, fontWeight: 800, color: "#262626", letterSpacing: "-0.4px" }}>
+                  Wanna learn how to
+                </span>
+                <div style={{ marginTop: 9 }}>
+                  <RotatingText
+                    texts={ROTATING_PHRASES}
+                    mainClassName="inline-flex justify-center overflow-hidden rounded-xl px-3 py-1"
+                    style={{
+                      backgroundColor: "rgba(var(--fc-rgb),0.12)",
+                      color: "var(--fc)",
+                      fontSize: 20,
+                      fontWeight: 800,
+                      letterSpacing: "-0.4px",
+                    }}
+                    staggerFrom="last"
+                    initial={{ y: "100%" }}
+                    animate={{ y: 0 }}
+                    exit={{ y: "-120%" }}
+                    staggerDuration={0.02}
+                    splitLevelClassName="overflow-hidden pb-1"
+                    transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                    rotationInterval={3800}
+                  />
+                </div>
+              </div>
               <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", marginBottom: 18 }}>
                 Pick a scenario, or type your own opening line.
               </p>

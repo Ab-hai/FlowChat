@@ -53,45 +53,13 @@ export function ChatSidebar({
       )}
 
       <div style={{ padding: "15px 14px 12px" }}>
-        <div className="flex items-center" style={{ gap: 8, marginBottom: 18, paddingLeft: 50 }}>
+        <div className="flex items-center" style={{ gap: 8, paddingLeft: 50 }}>
           <Logo size={27} icon={13} />
           <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>FlowChat</span>
         </div>
-        <Link
-          href="/dashboard"
-          onClick={close}
-          className={
-            "flex w-full items-center justify-center transition-colors " +
-            (dashActive
-              ? ""
-              : "border border-black/10 bg-black/[0.03] hover:bg-black/[0.06]")
-          }
-          style={{
-            gap: 8,
-            padding: "9px 10px",
-            borderRadius: 10,
-            fontSize: 13,
-            fontWeight: dashActive ? 600 : 500,
-            color: dashActive ? "var(--fc)" : "#4b5563",
-            ...(dashActive
-              ? {
-                  background: "rgba(var(--fc-rgb),0.09)",
-                  border: "1px solid rgba(var(--fc-rgb),0.18)",
-                }
-              : {}),
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <rect x="1.5" y="1.5" width="5" height="5" rx="1.5" fill={dashActive ? "var(--fc)" : "#9ca3af"} />
-            <rect x="8.5" y="1.5" width="5" height="5" rx="1.5" fill={dashActive ? "var(--fc)" : "#9ca3af"} />
-            <rect x="1.5" y="8.5" width="5" height="5" rx="1.5" fill={dashActive ? "var(--fc)" : "#9ca3af"} />
-            <rect x="8.5" y="8.5" width="5" height="5" rx="1.5" fill={dashActive ? "var(--fc)" : "#9ca3af"} />
-          </svg>
-          Dashboard
-        </Link>
       </div>
 
-      <div style={{ padding: "0 14px 14px" }}>
+      <div style={{ padding: "10px 14px 16px" }}>
         <Link
           href="/chat"
           onClick={close}
@@ -252,20 +220,33 @@ export function ChatSidebar({
         )}
       </div>
 
-      <div style={{ padding: "13px 14px", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-        <div className="flex items-center" style={{ gap: 9 }}>
+      <div style={{ padding: "10px 12px", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
+        <Link
+          href="/dashboard"
+          onClick={close}
+          className={
+            "flex w-full items-center transition-colors " +
+            (dashActive ? "" : "hover:bg-black/[0.04]")
+          }
+          style={{
+            gap: 9,
+            padding: "8px 9px",
+            borderRadius: 12,
+            ...(dashActive ? { background: "rgba(var(--fc-rgb),0.09)" } : {}),
+          }}
+        >
           <div
             className="flex shrink-0 items-center justify-center"
-            style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,var(--fc),#f07050)" }}
+            style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg,var(--fc),#f07050)" }}
           >
-            <span style={{ fontSize: 12, fontWeight: 700, color: "white" }}>{initial}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: "white" }}>{initial}</span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 fontSize: 12.5,
                 fontWeight: 600,
-                color: "#262626",
+                color: dashActive ? "var(--fc)" : "#262626",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -273,11 +254,18 @@ export function ChatSidebar({
             >
               {userName}
             </div>
-            <div style={{ fontSize: 11, color: "#9ca3af" }}>
-              {conversations.length} session{conversations.length === 1 ? "" : "s"}
-            </div>
+            <div style={{ fontSize: 11, color: dashActive ? "#e07050" : "#9ca3af" }}>View profile</div>
           </div>
-        </div>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+            <path
+              d="M5 3l4 4-4 4"
+              stroke={dashActive ? "var(--fc)" : "#c4c4c4"}
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
       </div>
     </div>
   );

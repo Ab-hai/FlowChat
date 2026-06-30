@@ -24,15 +24,15 @@ export function UserMenu({ userName }: { userName: string }) {
         aria-label="Account menu"
         className="flex items-center justify-center"
         style={{
-          width: 34,
-          height: 34,
+          width: 40,
+          height: 40,
           borderRadius: "50%",
           background: "linear-gradient(135deg,var(--fc),#f07050)",
           border: "none",
           boxShadow: "0 1px 6px rgba(var(--fc-rgb),0.3)",
         }}
       >
-        <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{initial}</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "white" }}>{initial}</span>
       </button>
 
       {open && (
@@ -40,7 +40,7 @@ export function UserMenu({ userName }: { userName: string }) {
           style={{
             position: "absolute",
             right: 0,
-            top: 42,
+            top: 48,
             width: 210,
             background: "white",
             borderRadius: 12,
