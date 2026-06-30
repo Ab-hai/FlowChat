@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { Logo } from "@/components/Logo";
+import { MorphMenuIcon } from "@/components/MorphMenuIcon";
 
 type Conversation = { id: string; title: string; time: string };
 
@@ -50,15 +52,20 @@ export function ChatSidebar({
         <div onClick={() => setMenuId(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
       )}
 
-      <div style={{ padding: "18px 14px 12px" }}>
-        <div className="flex items-center" style={{ gap: 8, marginBottom: 18 }}>
+      <div style={{ padding: "15px 14px 12px" }}>
+        <div className="flex items-center" style={{ gap: 8, marginBottom: 18, paddingLeft: 50 }}>
           <Logo size={27} icon={13} />
           <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>FlowChat</span>
         </div>
         <Link
           href="/dashboard"
           onClick={close}
-          className={dashActive ? "flex w-full items-center" : "flex w-full items-center hover:bg-black/5"}
+          className={
+            "flex w-full items-center justify-center transition-colors " +
+            (dashActive
+              ? ""
+              : "border border-black/10 bg-black/[0.03] hover:bg-black/[0.06]")
+          }
           style={{
             gap: 8,
             padding: "9px 10px",
@@ -66,8 +73,12 @@ export function ChatSidebar({
             fontSize: 13,
             fontWeight: dashActive ? 600 : 500,
             color: dashActive ? "var(--fc)" : "#4b5563",
-            background: dashActive ? "rgba(var(--fc-rgb),0.09)" : "transparent",
-            border: dashActive ? "1px solid rgba(var(--fc-rgb),0.18)" : "1px solid transparent",
+            ...(dashActive
+              ? {
+                  background: "rgba(var(--fc-rgb),0.09)",
+                  border: "1px solid rgba(var(--fc-rgb),0.18)",
+                }
+              : {}),
           }}
         >
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -89,15 +100,16 @@ export function ChatSidebar({
             gap: 6,
             padding: 10,
             borderRadius: 10,
-            border: "1.5px dashed rgba(var(--fc-rgb),0.32)",
-            background: "rgba(var(--fc-rgb),0.04)",
-            color: "var(--fc)",
+            border: "none",
+            background: "var(--fc)",
+            color: "white",
             fontSize: 13,
             fontWeight: 600,
+            boxShadow: "0 2px 10px rgba(var(--fc-rgb),0.35)",
           }}
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <path d="M6.5 2v9M2 6.5h9" stroke="var(--fc)" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M6.5 2v9M2 6.5h9" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
           New chat
         </Link>
@@ -273,9 +285,9 @@ export function ChatSidebar({
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
-        aria-label="Open menu"
-        className="fixed left-3 top-2.5 z-20 flex items-center justify-center"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? "Close menu" : "Open menu"}
+        className="fixed left-3 top-2.5 z-40 flex items-center justify-center"
         style={{
           width: 38,
           height: 38,
@@ -285,29 +297,38 @@ export function ChatSidebar({
           boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
+        <MorphMenuIcon open={open} />
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-30">
-          <div className="absolute inset-0 bg-black/40" onClick={close} />
-          <aside
-            className="absolute left-0 top-0 h-full"
-            style={{
-              width: 420,
-              background: "white",
-              borderRight: "1px solid rgba(0,0,0,0.07)",
-              boxShadow: "0 0 40px rgba(0,0,0,0.25)",
-            }}
-          >
-            {nav}
-          </aside>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <div className="fixed inset-0 z-30" key="drawer">
+            <motion.div
+              className="absolute inset-0 bg-black/40"
+              onClick={close}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            />
+            <motion.aside
+              className="absolute left-0 top-0 h-full"
+              style={{
+                width: 420,
+                background: "white",
+                borderRight: "1px solid rgba(0,0,0,0.07)",
+                boxShadow: "0 0 40px rgba(0,0,0,0.25)",
+              }}
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            >
+              {nav}
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

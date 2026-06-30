@@ -76,39 +76,39 @@ export default async function DashboardPage() {
   const userName = user?.name || user?.email?.split("@")[0] || "You";
 
   return (
-    <main className="flex-1 overflow-y-auto" style={{ padding: "28px 26px 48px" }}>
+    <main className="flex-1 overflow-y-auto" style={{ padding: "10px 26px 48px" }}>
       <div className="mx-auto" style={{ maxWidth: 980 }}>
-        <div className="mb-[22px] flex items-center justify-between pl-12">
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.6px", color: "#262626", marginBottom: 3 }}>
+        <div className="mb-[22px] pl-12">
+          <div className="flex items-center justify-between" style={{ minHeight: 38 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.6px", color: "#262626" }}>
               Your progress
             </h1>
-            <p style={{ fontSize: 13, color: "#9ca3af" }}>
-              {conversationCount} session{conversationCount === 1 ? "" : "s"} tracked · {monthYear}
-            </p>
+            <div className="flex shrink-0 items-center" style={{ gap: 10 }}>
+              <Link
+                href="/chat"
+                className="flex items-center"
+                style={{
+                  gap: 6,
+                  padding: "12px 20px",
+                  borderRadius: 100,
+                  background: "var(--fc)",
+                  color: "white",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  boxShadow: "0 2px 10px rgba(var(--fc-rgb),0.35)",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M6 1v5.5L8.5 9" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                New session
+              </Link>
+              <UserMenu userName={userName} />
+            </div>
           </div>
-          <div className="flex shrink-0 items-center" style={{ gap: 10 }}>
-            <Link
-              href="/chat"
-              className="flex items-center"
-              style={{
-                gap: 6,
-                padding: "10px 20px",
-                borderRadius: 100,
-                background: "var(--fc)",
-                color: "white",
-                fontSize: 13,
-                fontWeight: 600,
-                boxShadow: "0 2px 10px rgba(var(--fc-rgb),0.35)",
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1v5.5L8.5 9" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-              New session
-            </Link>
-            <UserMenu userName={userName} />
-          </div>
+          <p style={{ fontSize: 13, color: "#9ca3af"}}>
+            {conversationCount} session{conversationCount === 1 ? "" : "s"} tracked · {monthYear}
+          </p>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1fr_308px]">
