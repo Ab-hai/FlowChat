@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 
 export const metadata: Metadata = {
   title: "FlowChat — Speak English with real confidence",
@@ -20,7 +20,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${inter.variable} h-full antialiased`}
+        className={`${jakarta.variable} ${jakarta.className} h-full antialiased`}
         style={{ "--fc": "#d14925", "--fc-rgb": "209, 73, 37" } as React.CSSProperties}
       >
         <body className="min-h-full">{children}</body>

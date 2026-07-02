@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { Logo } from "@/components/Logo";
+import RotatingText from "@/components/ui/rotating-text";
 
 const features = [
   "No mid-chat corrections",
@@ -127,13 +128,45 @@ export default async function Home() {
         </div>
       </nav>
 
-      <div
-        className="flex flex-col items-center text-center"
-        style={{
-          padding: "72px 24px 52px",
-          animation: "heroIn 0.55s cubic-bezier(0.16,1,0.3,1)",
-        }}
-      >
+      <div className="relative overflow-hidden" style={{ padding: "72px 24px 52px" }}>
+        {/* ── Hero animation slot ─────────────────────────────────────────────
+            Replace this placeholder block with the animation component you source.
+            Keep it absolutely positioned + pointer-events-none so it sits behind
+            the hero content (which is z-indexed above it). ──────────────────── */}
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ zIndex: 0 }}>
+          <div
+            style={{
+              position: "absolute",
+              top: -60,
+              left: "22%",
+              width: 340,
+              height: 340,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(var(--fc-rgb),0.16), transparent 70%)",
+              filter: "blur(18px)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: 40,
+              right: "20%",
+              width: 280,
+              height: 280,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(var(--fc-rgb),0.1), transparent 70%)",
+              filter: "blur(18px)",
+            }}
+          />
+        </div>
+
+        <div
+          className="relative flex flex-col items-center text-center"
+          style={{
+            zIndex: 1,
+            animation: "heroIn 0.55s cubic-bezier(0.16,1,0.3,1)",
+          }}
+        >
         <div
           className="inline-flex items-center"
           style={{
@@ -153,18 +186,37 @@ export default async function Home() {
 
         <h1
           style={{
-            fontSize: "clamp(44px,6.5vw,76px)",
+            fontSize: "clamp(40px,6vw,72px)",
             fontWeight: 800,
-            lineHeight: 1.04,
-            letterSpacing: "-2.5px",
+            lineHeight: 1.06,
+            letterSpacing: "-2.2px",
             color: "#262626",
-            maxWidth: 760,
+            maxWidth: 820,
             marginBottom: 20,
           }}
         >
-          Speak English with
+          Speak English for
           <br />
-          <span style={{ color: "var(--fc)" }}>real confidence.</span>
+          <RotatingText
+            texts={[
+              "job interviews",
+              "small talk",
+              "ordering food",
+              "travelling abroad",
+              "daily standups",
+              "meeting new people",
+            ]}
+            mainClassName="inline-flex justify-center overflow-hidden"
+            style={{ color: "var(--fc)" }}
+            staggerFrom="last"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "-115%" }}
+            staggerDuration={0.015}
+            splitLevelClassName="overflow-hidden pb-2"
+            transition={{ type: "spring", damping: 30, stiffness: 400 }}
+            rotationInterval={2600}
+          />
         </h1>
         <p
           style={{
@@ -342,6 +394,7 @@ export default async function Home() {
               report
             </span>
           </div>
+        </div>
         </div>
       </div>
 

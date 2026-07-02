@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -8,6 +8,19 @@ import { Logo } from "@/components/Logo";
 import { MorphMenuIcon } from "@/components/MorphMenuIcon";
 
 type Conversation = { id: string; title: string; time: string };
+
+// true on ≥768px viewports; drives push-vs-overlay drawer behavior.
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return isDesktop;
+}
 
 export function ChatSidebar({
   conversations,
@@ -17,6 +30,7 @@ export function ChatSidebar({
   userName: string;
 }) {
   const [open, setOpen] = useState(false);
+  const isDesktop = useIsDesktop();
   const [menuId, setMenuId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const pathname = usePathname();
@@ -140,9 +154,9 @@ export function ChatSidebar({
                   >
                     <div
                       style={{
-                        fontSize: 12.5,
-                        fontWeight: active ? 600 : 500,
-                        color: active ? "var(--fc)" : "#374151",
+                        fontSize: 13.5,
+                        fontWeight: active ? 700 : 600,
+                        color: active ? "var(--fc)" : "#262626",
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -288,35 +302,52 @@ export function ChatSidebar({
         <MorphMenuIcon open={open} />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <div className="fixed inset-0 z-30" key="drawer">
-            <motion.div
-              className="absolute inset-0 bg-black/40"
-              onClick={close}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            />
-            <motion.aside
-              className="absolute left-0 top-0 h-full"
-              style={{
-                width: 420,
-                background: "white",
-                borderRight: "1px solid rgba(0,0,0,0.07)",
-                boxShadow: "0 0 40px rgba(0,0,0,0.25)",
-              }}
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            >
-              {nav}
-            </motion.aside>
+      {isDesktop ? (
+        /* Desktop: in-flow panel that animates its width, pushing the content
+           aside instead of covering it. No dark backdrop. */
+        <motion.aside
+          className="shrink-0 overflow-hidden"
+          style={{ background: "white" }}
+          initial={false}
+          animate={{ width: open ? 420 : 0 }}
+          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <div style={{ width: 420, height: "100%", borderRight: "1px solid rgba(0,0,0,0.07)" }}>
+            {nav}
           </div>
-        )}
-      </AnimatePresence>
+        </motion.aside>
+      ) : (
+        /* Mobile: overlay drawer that slides over the content with a dim backdrop. */
+        <AnimatePresence>
+          {open && (
+            <div className="fixed inset-0 z-30" key="drawer">
+              <motion.div
+                className="absolute inset-0 bg-black/40"
+                onClick={close}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              />
+              <motion.aside
+                className="absolute left-0 top-0 h-full"
+                style={{
+                  width: 420,
+                  background: "white",
+                  borderRight: "1px solid rgba(0,0,0,0.07)",
+                  boxShadow: "0 0 40px rgba(0,0,0,0.25)",
+                }}
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              >
+                {nav}
+              </motion.aside>
+            </div>
+          )}
+        </AnimatePresence>
+      )}
     </>
   );
 }
