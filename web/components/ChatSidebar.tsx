@@ -36,6 +36,11 @@ export function ChatSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const close = () => setOpen(false);
+  // Desktop drawer pushes content (IDE-style) → keep it open when navigating.
+  // Mobile drawer overlays the chat → close it on navigation so the chat shows.
+  const closeOnNav = () => {
+    if (!isDesktop) setOpen(false);
+  };
   const initial = (userName.trim()[0] || "Y").toUpperCase();
   const dashActive = pathname === "/dashboard";
 
@@ -76,7 +81,7 @@ export function ChatSidebar({
       <div style={{ padding: "10px 14px 16px" }}>
         <Link
           href="/chat"
-          onClick={close}
+          onClick={closeOnNav}
           className="flex w-full items-center justify-center"
           style={{
             gap: 6,
@@ -143,7 +148,7 @@ export function ChatSidebar({
                 ) : (
                   <Link
                     href={`/chat/${c.id}`}
-                    onClick={close}
+                    onClick={closeOnNav}
                     className="block"
                     style={{
                       padding: "9px 30px 9px 11px",
@@ -237,7 +242,7 @@ export function ChatSidebar({
       <div style={{ padding: "10px 12px", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
         <Link
           href="/dashboard"
-          onClick={close}
+          onClick={closeOnNav}
           className={
             "flex w-full items-center transition-colors " +
             (dashActive ? "" : "hover:bg-black/[0.04]")

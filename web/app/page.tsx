@@ -56,9 +56,8 @@ export default async function Home() {
   return (
     <div style={{ height: "100vh", overflowY: "auto", background: "#f5f3f7" }}>
       <nav
-        className="sticky top-0 z-40 flex items-center justify-between"
+        className="sticky top-0 z-40 flex items-center justify-between gap-3 px-5 py-4 sm:px-12"
         style={{
-          padding: "16px 48px",
           background: "rgba(245,243,247,0.9)",
           backdropFilter: "blur(14px)",
           borderBottom: "1px solid rgba(0,0,0,0.06)",
@@ -77,7 +76,7 @@ export default async function Home() {
             FlowChat
           </span>
         </div>
-        <div className="flex items-center" style={{ gap: 10 }}>
+        <div className="flex shrink-0 items-center" style={{ gap: 10 }}>
           {userId ? (
             <Link
               href="/chat"
@@ -88,6 +87,7 @@ export default async function Home() {
                 color: "white",
                 fontSize: 14,
                 fontWeight: 600,
+                whiteSpace: "nowrap",
                 boxShadow: "0 2px 12px rgba(var(--fc-rgb),0.38)",
               }}
             >
@@ -105,6 +105,7 @@ export default async function Home() {
                   color: "#262626",
                   fontSize: 14,
                   fontWeight: 500,
+                  whiteSpace: "nowrap",
                 }}
               >
                 Sign in
@@ -118,6 +119,7 @@ export default async function Home() {
                   color: "white",
                   fontSize: 14,
                   fontWeight: 600,
+                  whiteSpace: "nowrap",
                   boxShadow: "0 2px 12px rgba(var(--fc-rgb),0.38)",
                 }}
               >
@@ -128,7 +130,7 @@ export default async function Home() {
         </div>
       </nav>
 
-      <div className="relative overflow-hidden" style={{ padding: "72px 24px 52px" }}>
+      <div className="relative overflow-hidden px-4 pt-14 pb-12 sm:px-6 sm:pt-[72px] sm:pb-[52px]">
         {/* ── Hero animation slot ─────────────────────────────────────────────
             Replace this placeholder block with the animation component you source.
             Keep it absolutely positioned + pointer-events-none so it sits behind
@@ -167,44 +169,27 @@ export default async function Home() {
             animation: "heroIn 0.55s cubic-bezier(0.16,1,0.3,1)",
           }}
         >
-        <div
-          className="inline-flex items-center"
-          style={{
-            gap: 7,
-            padding: "5px 14px",
-            background: "rgba(var(--fc-rgb),0.1)",
-            borderRadius: 100,
-            marginBottom: 28,
-            border: "1px solid rgba(var(--fc-rgb),0.22)",
-          }}
-        >
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--fc)" }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fc)" }}>
-            AI conversation coach
-          </span>
-        </div>
-
         <h1
           style={{
-            fontSize: "clamp(40px,6vw,72px)",
+            fontSize: "clamp(28px,8vw,72px)",
             fontWeight: 800,
-            lineHeight: 1.06,
+            lineHeight: 1.08,
             letterSpacing: "-2.2px",
             color: "#262626",
             maxWidth: 820,
-            marginBottom: 20,
+            marginBottom: 18,
           }}
         >
-          Speak English for
+          Practice English for
           <br />
           <RotatingText
             texts={[
-              "job interviews",
+              "interviews",
               "small talk",
-              "ordering food",
-              "travelling abroad",
-              "daily standups",
-              "meeting new people",
+              "eating out",
+              "trips abroad",
+              "standups",
+              "new friends",
             ]}
             mainClassName="inline-flex justify-center overflow-hidden"
             style={{ color: "var(--fc)" }}
@@ -220,15 +205,15 @@ export default async function Home() {
         </h1>
         <p
           style={{
-            fontSize: 18,
+            fontSize: "clamp(14px,3.9vw,18px)",
             color: "#5f5f5f",
             maxWidth: 430,
-            lineHeight: 1.68,
+            lineHeight: 1.62,
             marginBottom: 40,
           }}
         >
           Practice spoken English with a friendly AI partner. No pressure, no
-          mid-chat corrections — just natural conversation and honest feedback.
+          mid-chat corrections , just natural conversation and honest feedback.
         </p>
 
         <div

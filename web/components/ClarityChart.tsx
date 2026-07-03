@@ -25,7 +25,7 @@ export function ClarityChart({ data }: { data: Point[] }) {
   const maxH = 165;
 
   return (
-    <div className="flex" style={{ gap: 9, height: 190 }}>
+    <div className="flex justify-start" style={{ gap: 14, height: 190 }}>
       {data.map((d, i) => {
         const band = clarityBand(d.score);
         const h = Math.max((d.score / 100) * maxH, 6);
@@ -33,7 +33,7 @@ export function ClarityChart({ data }: { data: Point[] }) {
           <div
             key={i}
             className="flex flex-col"
-            style={{ flex: 1, justifyContent: "flex-end", gap: 7 }}
+            style={{ flex: 1, maxWidth: 56, justifyContent: "flex-end", gap: 7 }}
           >
             <div
               style={{

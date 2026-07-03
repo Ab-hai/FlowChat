@@ -7,7 +7,7 @@ import { VoiceButton } from "@/components/VoiceButton";
 import { Logo } from "@/components/Logo";
 import { recordUtterance, webmToWav16k, type Recorder } from "@/lib/audio";
 import { topics } from "@/lib/topics";
-import { ActionSearchBar, type Action } from "@/components/ui/action-search-bar";
+import { ActionSearchBar } from "@/components/ui/action-search-bar";
 import RotatingText from "@/components/ui/rotating-text";
 import { Briefcase, Coffee, MessageCircle, Plane, Users, Utensils } from "lucide-react";
 
@@ -19,14 +19,6 @@ const TOPIC_ICONS: Record<string, React.ReactNode> = {
   travel: <Plane className="h-4 w-4" style={{ color: "var(--fc)" }} />,
   free: <MessageCircle className="h-4 w-4" style={{ color: "var(--fc)" }} />,
 };
-
-const TOPIC_ACTIONS: Action[] = topics.map((t) => ({
-  id: t.id,
-  label: t.title,
-  description: t.desc,
-  end: "Scenario",
-  icon: TOPIC_ICONS[t.id],
-}));
 
 const ROTATING_PHRASES: string[] = topics.map((t) => t.practiceLabel);
 
@@ -92,7 +84,7 @@ function AiAvatar() {
 
 function TypingDots() {
   return (
-    <div className="flex items-center" style={{ gap: 5 }}>
+    <div className="flex items-center" style={{ gap: 5, height: 24 }}>
       {[0, 0.18, 0.36].map((d, i) => (
         <div
           key={i}
@@ -409,43 +401,85 @@ export function Chat({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto" style={{ padding: "22px 0" }}>
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center" style={{ padding: "0 24px" }}>
-            <div style={{ width: "100%", maxWidth: 480 }}>
-              <div className="flex flex-col items-center" style={{ marginBottom: 7 }}>
-                <span style={{ fontSize: 20, fontWeight: 800, color: "#262626", letterSpacing: "-0.4px" }}>
+          <div
+            className="flex h-full flex-col items-center justify-center"
+            style={{ padding: "0 24px 56px" }}
+          >
+            <div style={{ width: "100%", maxWidth: 580 }}>
+              <div className="flex flex-col items-center" style={{ marginBottom: 14 }}>
+                <span
+                  style={{
+                    fontSize: "clamp(28px,5.5vw,40px)",
+                    fontWeight: 800,
+                    color: "#262626",
+                    letterSpacing: "-0.8px",
+                    lineHeight: 1.1,
+                  }}
+                >
                   Wanna learn how to
                 </span>
-                <div style={{ marginTop: 9 }}>
+                <div style={{ marginTop: 12 }}>
                   <RotatingText
                     texts={ROTATING_PHRASES}
-                    mainClassName="inline-flex justify-center overflow-hidden rounded-xl px-3 py-1"
+                    mainClassName="inline-flex justify-center overflow-hidden rounded-2xl px-4 py-2"
                     style={{
                       backgroundColor: "rgba(var(--fc-rgb),0.12)",
                       color: "var(--fc)",
-                      fontSize: 20,
+                      fontSize: "clamp(28px,5.5vw,40px)",
                       fontWeight: 800,
-                      letterSpacing: "-0.4px",
+                      letterSpacing: "-0.8px",
                     }}
                     staggerFrom="last"
                     initial={{ y: "100%" }}
                     animate={{ y: 0 }}
                     exit={{ y: "-120%" }}
                     staggerDuration={0.02}
-                    splitLevelClassName="overflow-hidden pb-1"
+                    splitLevelClassName="overflow-hidden pb-2"
                     transition={{ type: "spring", damping: 30, stiffness: 400 }}
                     rotationInterval={3800}
                   />
                 </div>
               </div>
-              <p style={{ fontSize: 13, color: "#9ca3af", textAlign: "center", marginBottom: 18 }}>
+              <p style={{ fontSize: 14, color: "#9ca3af", textAlign: "center", marginBottom: 22 }}>
                 Pick a scenario, or type your own opening line.
               </p>
               <ActionSearchBar
-                actions={TOPIC_ACTIONS}
-                onSelect={(a) => startTopic(a.id)}
-                onSubmit={(q) => void runTurn(q)}
+                value={input}
+                onChange={setInput}
+                onSubmit={(q) => {
+                  setInput("");
+                  void runTurn(q);
+                }}
                 pending={starting}
               />
+              <div className="flex flex-wrap items-center justify-center" style={{ gap: 8, marginTop: 20 }}>
+                {topics.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setInput(t.practiceLabel);
+                      startTopic(t.id);
+                    }}
+                    disabled={starting}
+                    className="flex items-center transition-colors hover:bg-black/[0.04]"
+                    style={{
+                      gap: 6,
+                      padding: "8px 14px",
+                      borderRadius: 100,
+                      border: "1px solid rgba(0,0,0,0.1)",
+                      background: "white",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "#374151",
+                      cursor: "pointer",
+                      opacity: starting ? 0.6 : 1,
+                    }}
+                  >
+                    {TOPIC_ICONS[t.id]}
+                    {t.title}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
@@ -455,16 +489,14 @@ export function Chat({
             if (m.role === "assistant") {
               return (
                 <div key={i} className="flex justify-start" style={{ padding: "0 22px", marginBottom: 16, animation: "fadeUp 0.2s ease both" }}>
-                  <div className="flex items-start" style={{ gap: 9, maxWidth: "74%" }}>
-                    <div style={{ marginTop: 2 }}>
+                  <div style={{ maxWidth: "74%" }}>
+                    <div className="flex items-end" style={{ gap: 9 }}>
                       <AiAvatar />
-                    </div>
-                    <div>
                       <div
                         style={{
                           background: "white",
                           color: "#262626",
-                          padding: waiting ? "15px 17px" : "12px 15px",
+                          padding: "12px 15px",
                           borderRadius: "18px 18px 18px 4px",
                           fontSize: 14.5,
                           lineHeight: 1.65,
@@ -475,10 +507,10 @@ export function Chat({
                       >
                         {waiting ? <TypingDots /> : m.content}
                       </div>
-                      {!waiting && m.time && (
-                        <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 4, paddingLeft: 4 }}>{m.time}</div>
-                      )}
                     </div>
+                    {!waiting && m.time && (
+                      <div style={{ fontSize: 10.5, color: "#9ca3af", marginTop: 4, paddingLeft: 41 }}>{m.time}</div>
+                    )}
                   </div>
                 </div>
               );
