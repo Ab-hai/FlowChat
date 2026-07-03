@@ -219,7 +219,6 @@ async def pronounce(audio: UploadFile = File(...)):
         if isinstance(w, dict) and w.get("word")
     ]
     return {
-        "recognized": "",
         "accuracy": parsed.get("accuracy"),
         "fluency": parsed.get("fluency"),
         "prosody": parsed.get("prosody"),

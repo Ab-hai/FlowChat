@@ -1,6 +1,5 @@
 export type Topic = {
   id: string;
-  emoji: string;
   title: string;
   desc: string;
   /** Verb phrase that completes "Wanna learn how to ___" in the new-chat heading. */
@@ -11,7 +10,6 @@ export type Topic = {
 export const topics: Topic[] = [
   {
     id: "interview",
-    emoji: "💼",
     title: "Job interview",
     desc: "Practice common interview questions",
     practiceLabel: "ace a job interview",
@@ -20,7 +18,6 @@ export const topics: Topic[] = [
   },
   {
     id: "restaurant",
-    emoji: "🍽️",
     title: "At a restaurant",
     desc: "Roleplay ordering a meal",
     practiceLabel: "order at a restaurant",
@@ -29,7 +26,6 @@ export const topics: Topic[] = [
   },
   {
     id: "smalltalk",
-    emoji: "☕",
     title: "Casual small talk",
     desc: "Warm up with everyday chat",
     practiceLabel: "make small talk",
@@ -37,7 +33,6 @@ export const topics: Topic[] = [
   },
   {
     id: "standup",
-    emoji: "🧑‍💻",
     title: "Daily standup",
     desc: "Give a quick work update",
     practiceLabel: "run a daily standup",
@@ -46,7 +41,6 @@ export const topics: Topic[] = [
   },
   {
     id: "travel",
-    emoji: "✈️",
     title: "Travel & directions",
     desc: "Ask for help getting around",
     practiceLabel: "ask for directions",
@@ -55,7 +49,6 @@ export const topics: Topic[] = [
   },
   {
     id: "free",
-    emoji: "💬",
     title: "Free chat",
     desc: "Talk about anything you like",
     practiceLabel: "talk about anything",
