@@ -33,9 +33,32 @@ type PronTurn = {
   words: PronWord[];
 };
 
-function speak(text: string): Promise<void> {
+// Bluetooth earbuds drop to low-quality "call" mode while the mic is open, then
+// take ~1-2s to switch back to hi-fi (A2DP) once it closes. Playing a brief,
+// near-silent tone spins the output path back up during silence, so the first
+// words of the reply don't come out muffled. Best-effort — harmless on wired/
+// speaker output.
+async function warmUpOutput(ms = 850): Promise<void> {
+  try {
+    const ctx = new AudioContext();
+    if (ctx.state === "suspended") await ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0005; // ~-66dB, effectively inaudible
+    osc.frequency.value = 220;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    await new Promise((r) => setTimeout(r, ms));
+    osc.stop();
+    await ctx.close();
+  } catch {
+    // ignore if the audio context can't start
+  }
+}
+
+async function speak(text: string): Promise<void> {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
   return new Promise((resolve) => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return resolve();
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-US";
@@ -259,12 +282,24 @@ export function Chat({
       if (!blob) continue;
 
       setVoiceStatus("thinking");
-      const [text, pron] = await Promise.all([transcribeBlob(blob), pronounceBlob(blob)]);
-      if (pron) pronScoresRef.current.push(pron);
+      // Warm the Bluetooth output back up while we transcribe + generate, so
+      // it's ready the instant the reply is — hides the ~850ms behind the wait.
+      const warmUp = warmUpOutput();
+      // Pronunciation only feeds end-of-session feedback, so score it in the
+      // background instead of blocking the reply on the slower Gemini call.
+      void pronounceBlob(blob).then((pron) => {
+        if (pron) pronScoresRef.current.push(pron);
+      });
+
+      const text = await transcribeBlob(blob);
       if (!voiceModeRef.current) break;
-      if (!text) continue;
+      if (!text) {
+        await warmUp;
+        continue;
+      }
 
       const reply = await runTurn(text);
+      await warmUp;
       if (!voiceModeRef.current) break;
       setVoiceStatus("speaking");
       await speak(reply);

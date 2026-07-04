@@ -46,7 +46,7 @@ export async function recordUtterance(): Promise<Recorder> {
       spoke = true;
       lastLoud = now;
     }
-    if (spoke && now - lastLoud > 1200) finish();
+    if (spoke && now - lastLoud > 900) finish();
     else if (!spoke && now - start > 8000) finish();
     else if (now - start > 25000) finish();
   }, 150);
